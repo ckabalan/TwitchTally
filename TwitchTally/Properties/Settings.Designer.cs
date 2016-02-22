@@ -43,14 +43,23 @@ namespace TwitchTally.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("TwitchUsernameHere")]
+        [global::System.Configuration.DefaultSettingValueAttribute("TwitchViewer")]
         public string IRCUsername {
             get {
                 return ((string)(this["IRCUsername"]));
             }
         }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+
+		[global::System.Configuration.ApplicationScopedSettingAttribute()]
+		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+		[global::System.Configuration.DefaultSettingValueAttribute("TwitchViewerAlt")]
+		public string IRCUsernameAlt {
+			get {
+				return ((string)(this["IRCUsernameAlt"]));
+			}
+		}
+
+		[global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("oauth:BunchOfOAuthJibberishHere")]
         public string IRCPassword {
