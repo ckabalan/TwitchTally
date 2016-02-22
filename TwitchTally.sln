@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchTally", "TwitchTally\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchTallyWorker", "TwitchTallyWorker\TwitchTallyWorker.csproj", "{3E713328-D5DC-4F12-A2AA-20AFE1F884C9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchTallyShared", "TwitchTallyShared\TwitchTallyShared.csproj", "{269C1653-3518-4B5C-AA55-D9E6005C70F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3E713328-D5DC-4F12-A2AA-20AFE1F884C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E713328-D5DC-4F12-A2AA-20AFE1F884C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E713328-D5DC-4F12-A2AA-20AFE1F884C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{269C1653-3518-4B5C-AA55-D9E6005C70F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{269C1653-3518-4B5C-AA55-D9E6005C70F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{269C1653-3518-4B5C-AA55-D9E6005C70F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{269C1653-3518-4B5C-AA55-D9E6005C70F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -49,17 +49,8 @@ namespace TwitchTally.Properties {
                 return ((string)(this["IRCUsername"]));
             }
         }
-
-		[global::System.Configuration.ApplicationScopedSettingAttribute()]
-		[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-		[global::System.Configuration.DefaultSettingValueAttribute("TwitchViewerAlt")]
-		public string IRCUsernameAlt {
-			get {
-				return ((string)(this["IRCUsernameAlt"]));
-			}
-		}
-
-		[global::System.Configuration.ApplicationScopedSettingAttribute()]
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("oauth:BunchOfOAuthJibberishHere")]
         public string IRCPassword {
@@ -92,6 +83,24 @@ namespace TwitchTally.Properties {
         public string ChannelList {
             get {
                 return ((string)(this["ChannelList"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("TwitchViewerAlt")]
+        public string IRCUsernameAlt {
+            get {
+                return ((string)(this["IRCUsernameAlt"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("chatlogs/")]
+        public string LogDirectory {
+            get {
+                return ((string)(this["LogDirectory"]));
             }
         }
     }
