@@ -1,0 +1,27 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="TwitchTally.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="IRCServer" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">irc.twitch.tv</Value>
+    </Setting>
+    <Setting Name="IRCPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">6667</Value>
+    </Setting>
+    <Setting Name="IRCUsername" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">TwitchUsernameHere</Value>
+    </Setting>
+    <Setting Name="IRCPassword" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">oauth:BunchOfOAuthJibberishHere</Value>
+    </Setting>
+    <Setting Name="AutojoinTopChannels" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutojoinViewerMinimum" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="ChannelList" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">channel1,channel2,channel3</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
