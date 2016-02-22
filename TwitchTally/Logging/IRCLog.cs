@@ -24,7 +24,7 @@ namespace TwitchTally.Logging {
 			}
 			m_LogStream = new StreamWriter(m_LogFile);
 			m_LogStream.AutoFlush = true;
-			WriteLine(String.Format("Opened (v{0})", Assembly.GetExecutingAssembly().GetName().Version.ToString()), true);
+			WriteLine(String.Format("Opened. TwitchTally v{0}", Assembly.GetExecutingAssembly().GetName().Version.ToString()), true);
 		}
 
 		public static void CloseLog() {
@@ -41,9 +41,10 @@ namespace TwitchTally.Logging {
 				OpenLog();
 			} else {
 				if (Path.GetFileName(m_LogFile.Name) != String.Format("{0:yyyyMMdd-HH}.log", DateTime.UtcNow)) {
+					m_LogStream.WriteLine(String.Format("{0:O}#Closed.", DateTime.UtcNow));
 					m_LogStream.Close();
 					m_LogFile.Close();
-					OpenLog();
+                    OpenLog();
 				}
 			}
 			if (Meta) {
