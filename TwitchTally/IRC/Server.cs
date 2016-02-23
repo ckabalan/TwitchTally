@@ -260,10 +260,7 @@ namespace TwitchTally.IRC {
 				// Send the data (for real)
 				Send(i_DataToSend);
 				// Schedule the send counter to be decreased after SendLimitTimeMS ms.
-				Task.Factory.StartNew(() => {
-					Thread.Sleep(Properties.Settings.Default.SendLimitTimeMS);
-					Interlocked.Decrement(ref m_SendRate);
-				});
+				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref m_SendRate); }, Properties.Settings.Default.SendLimitTimeMS);
 			});
 		}
 

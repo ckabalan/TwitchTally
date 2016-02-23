@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 namespace TwitchTallyShared {
 	public static class Functions {
 
+		public static async void PauseAndExecute(Action action, int timeoutInMilliseconds) {
+			await Task.Delay(timeoutInMilliseconds);
+			action();
+		}
+
 		public static string CombineAfterIndex(string[] InputArr, string Glue, int StartIdx) {
 			string OutputStr = String.Empty;
 			for (int i = StartIdx; i < InputArr.Length; i++) {
