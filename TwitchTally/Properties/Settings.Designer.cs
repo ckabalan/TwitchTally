@@ -103,5 +103,23 @@ namespace TwitchTally.Properties {
                 return ((string)(this["LogDirectory"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        public int SendLimitNum {
+            get {
+                return ((int)(this["SendLimitNum"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30000")]
+        public int SendLimitTimeMS {
+            get {
+                return ((int)(this["SendLimitTimeMS"]));
+            }
+        }
     }
 }

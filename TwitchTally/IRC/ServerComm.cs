@@ -20,6 +20,8 @@ namespace TwitchTally.IRC {
 		private Socket m_ClientSock;
 		private Server m_ParentServer;
 
+		public bool Connected { get { return m_ClientSock.Connected; } }
+
 		public void StartClient(Server i_ParentServer) {
 			if ((m_ClientSock != null) && (m_ClientSock.Connected)) {
 				Close(m_ClientSock);
@@ -52,13 +54,14 @@ namespace TwitchTally.IRC {
 			ServerComm.WorkSocket.BeginReceive(ServerComm.Buffer, 0, IRCComm.BufferSize, 0, new AsyncCallback(OnDataReceived), ServerComm);
 			Logger.Debug("Negotiating IRC Logon.");
 			if (m_ParentServer.Pass != "") {
-				m_ParentServer.Send("PASS " + m_ParentServer.Pass);
-				m_ParentServer.Send("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.Send("NICK " + m_ParentServer.Nick);
+				m_ParentServer.QueueSend("PASS " + m_ParentServer.Pass);
+				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
+				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
 			} else {
-				m_ParentServer.Send("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.Send("NICK " + m_ParentServer.Nick);
+				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
+				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
 			}
+			m_ParentServer.StartSendQueueConsumer();
 		}
 
 		private void OnDataReceived(IAsyncResult i_AsyncResult) {

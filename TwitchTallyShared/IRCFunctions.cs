@@ -24,6 +24,22 @@ namespace TwitchTallyShared {
 			return "PRIVMSG " + To + " :" + Message;
 		}
 
+		public static string CapabilityLS() {
+			return "CAP LS";
+		}
+
+		public static string CapabilityREQ(string ListOfCabilities) {
+			return "CAP REQ :" + ListOfCabilities;
+		}
+
+		public static string CapabilityREQ(List<string> ListOfCabilities) {
+			return "CAP REQ :" + String.Join(" ", ListOfCabilities);
+		}
+
+		public static string CapabilityEND() {
+			return "CAP END";
+		}
+
 		public static string CTCPVersionReply(string Username) {
 			return "NOTICE " + Username + " :\x01VERSION Twitch Tally Bot v"
 					+ Assembly.GetExecutingAssembly().GetName().Version + "\x01";
