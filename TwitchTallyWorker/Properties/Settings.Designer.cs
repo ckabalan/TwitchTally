@@ -49,5 +49,14 @@ namespace TwitchTallyWorker.Properties {
                 return ((string)(this["MasterPassword"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4096")]
+        public int MasterCommBufferSize {
+            get {
+                return ((int)(this["MasterCommBufferSize"]));
+            }
+        }
     }
 }

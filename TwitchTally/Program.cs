@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using NLog;
 using TwitchTally.IRC;
 using TwitchTally.Logging;
-using TwitchTally.WorkerComm;
+using TwitchTally.Communication;
 
 namespace TwitchTally {
 	class Program {
@@ -42,8 +42,8 @@ namespace TwitchTally {
 		}
 
 		static void StartMasterServer() {
-			MasterServer masterServer = new MasterServer();
-			masterServer.StartListening();
+			MasterListener masterListener = new MasterListener();
+			masterListener.StartListening();
 		}
 
 		static Boolean ParseCommand(String i_Input) {

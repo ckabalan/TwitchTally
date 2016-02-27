@@ -1,18 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
+using NLog.Fluent;
 
-namespace TwitchTally.WorkerComm {
-	public class WorkerClient {
-		public Socket Socket;
+namespace TwitchTally.Communication {
+	public class Worker {
+		private static readonly NLog.Logger Logger = LogManager.GetCurrentClassLogger();
+		public TcpClient Client;
+		public SslStream SSLStream;
 		public String DataBuffer;
 		public int Index;
 
-		public WorkerClient(Socket i_Socket) {
-			Socket = i_Socket;
+		public Worker(TcpClient i_TcpClient) {
+			Client = i_TcpClient;
+			SSLStream = new SslStream(Client.GetStream(), false);
 			OnClientConnect();
 		}
 
@@ -25,27 +31,23 @@ namespace TwitchTally.WorkerComm {
 		/// </summary>
 		/// <param name="Data">String containing the data to be sent to the client</param>
 		public void Send(String Data) {
-			if (Data.Length > 150) {
-				Console.WriteLine("To ClientInfo " + Index + ":\t" + Data.Substring(0, 150) + "...");
-			} else {
-				Console.WriteLine("To ClientInfo " + Index + ":\t" + Data);
-			}
+			// Write a message to the client. 
+			Logger.Trace("SSL Send: {0}", Data);
 			byte[] byteData = Encoding.UTF8.GetBytes(Data + "\x4");
-			Socket.Send(byteData);
+			SSLStream.Write(byteData);
+			SSLStream.Flush();
 		}
-
+		
 		/// <summary>
 		/// Triggered when data is recieved from the Client
 		/// </summary>
 		/// <param name="Data">Contains data sent from the Client</param>
 		public void OnReceiveData(String Data) {
-			if (Data.Length > 1000) {
-				Console.WriteLine("From ClientInfo " + Index + ":\t" + Data.Substring(0, 1000) + "...");
-			} else {
-				Console.WriteLine("From ClientInfo " + Index + ":\t" + Data);
-			}
 			//ParseMessage(Data);
-			Console.WriteLine(Data);
+			Logger.Trace("SSL Recieve: {0}", Data);
+			if (Data.ToUpper().Contains("PING?")) {
+				Send("PONG!");
+			}
 		}
 
 

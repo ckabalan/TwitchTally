@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NLog;
 using TwitchTallyShared;
-using TwitchTallyWorker.MasterComm;
+using TwitchTallyWorker.Communication;
 
 namespace TwitchTallyWorker {
 	class Program {
@@ -14,10 +14,8 @@ namespace TwitchTallyWorker {
 		static void Main(string[] args) {
 			//Master master = new Master();
 			//master.Connect();
-
-			MasterSSL s = new MasterSSL();
-			s.ConnectSSL("Test hehehe");
-
+			WorkerConnection workerConnection = new WorkerConnection();
+			workerConnection.Connect();
 			Logger.Info("Waiting for User Input before exiting.");
 			Console.ReadLine();
 		}
