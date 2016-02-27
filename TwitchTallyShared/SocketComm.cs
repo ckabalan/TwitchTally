@@ -6,17 +6,17 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TwitchTally.IRC {
-	public class IRCComm {
+namespace TwitchTallyShared {
+	public class SocketComm {
 		public Socket WorkSocket = null;
 		public const int BufferSize = 1024;
 		public byte[] Buffer = new byte[BufferSize];
 		public MemoryStream MemoryStream = new MemoryStream();
 		public BinaryWriter BinaryWriter;
 		public string StringBuffer;
-		public ServerComm ParentServerComm;
+		public object ParentComm;
 
-		public IRCComm() {
+		public SocketComm() {
 			BinaryWriter = new BinaryWriter(MemoryStream);
 		}
 

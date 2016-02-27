@@ -3,39 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using TwitchTallyShared;
 using NLog;
+using TwitchTallyShared;
 
-namespace TwitchTally.IRC {
-	public class ServerComm {
+namespace TwitchTallyWorker.MasterComm {
+	public class MasterComm {
 		private static readonly NLog.Logger Logger = LogManager.GetCurrentClassLogger();
 		private ManualResetEvent m_ConnectDone = new ManualResetEvent(false);
 		private ManualResetEvent m_SendDone = new ManualResetEvent(false);
 		private ManualResetEvent m_ReceiveDone = new ManualResetEvent(false);
 		private String m_Response = String.Empty;
 		private Socket m_ClientSock;
-		private Server m_ParentServer;
+		private Master m_ParentMaster;
 
 		public bool Connected { get { return m_ClientSock.Connected; } }
 
-		public void StartClient(Server i_ParentServer) {
+		public void StartClient(Master i_ParentMaster) {
 			if ((m_ClientSock != null) && (m_ClientSock.Connected)) {
 				Close(m_ClientSock);
 			}
-			m_ParentServer = i_ParentServer;
+			m_ParentMaster = i_ParentMaster;
 			int i = 0;
 			IPAddress IPAddr;
-			if (int.TryParse(m_ParentServer.Hostname.Substring(0, 1), out i)) {
-				IPAddr = IPAddress.Parse(m_ParentServer.Hostname);
+			if (int.TryParse(m_ParentMaster.Hostname.Substring(0, 1), out i)) {
+				IPAddr = IPAddress.Parse(m_ParentMaster.Hostname);
 			} else {
-				IPHostEntry ipHostInfo = Dns.GetHostEntry(m_ParentServer.Hostname);
+				IPHostEntry ipHostInfo = Dns.GetHostEntry(m_ParentMaster.Hostname);
 				IPAddr = ipHostInfo.AddressList[0];
 			}
-			IPEndPoint ConnectSock = new IPEndPoint(IPAddr, m_ParentServer.Port);
+			IPEndPoint ConnectSock = new IPEndPoint(IPAddr, m_ParentMaster.Port);
 			m_ClientSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Logger.Debug("Initiating Socket Connection.");
 			m_ClientSock.BeginConnect(ConnectSock, new AsyncCallback(OnConnect), m_ClientSock);
@@ -46,57 +45,49 @@ namespace TwitchTally.IRC {
 			ServerSock.EndConnect(i_AsyncResult);
 			Logger.Info("Connected.");
 			m_ConnectDone.Set();
-			SocketComm ServerComm = new SocketComm();
-			ServerComm.ParentComm = this;
-			ServerComm.WorkSocket = ServerSock;
+			SocketComm MasterComm = new SocketComm();
+			MasterComm.ParentComm = this;
+			MasterComm.WorkSocket = ServerSock;
 			//AppLog.WriteLine(5, "STATUS", "Waiting for data...");
 			Logger.Debug("Starting Recieve Buffer.");
-			ServerComm.WorkSocket.BeginReceive(ServerComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), ServerComm);
-			Logger.Debug("Negotiating IRC Logon.");
-			if (m_ParentServer.Pass != "") {
-				m_ParentServer.QueueSend("PASS " + m_ParentServer.Pass);
-				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
-			} else {
-				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
-			}
-			m_ParentServer.StartSendQueueConsumer();
+			MasterComm.WorkSocket.BeginReceive(MasterComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), MasterComm);
+			Logger.Debug("Negotiating Worker Logon.");
+			// Send inital login here.
 		}
 
 		private void OnDataReceived(IAsyncResult i_AsyncResult) {
-			SocketComm ServerComm = (SocketComm)i_AsyncResult.AsyncState;
-			Socket SockHandler = ServerComm.WorkSocket;
+			SocketComm MasterComm = (SocketComm)i_AsyncResult.AsyncState;
+			Socket SockHandler = MasterComm.WorkSocket;
 			try {
 				int BytesRead = SockHandler.EndReceive(i_AsyncResult);
 				if (BytesRead > 0) {
 					char[] TempByteArr = new char[BytesRead];
-					int ReceivedLen = Encoding.UTF8.GetChars(ServerComm.Buffer, 0, BytesRead, TempByteArr, 0);
+					int ReceivedLen = Encoding.UTF8.GetChars(MasterComm.Buffer, 0, BytesRead, TempByteArr, 0);
 					char[] ReceivedCharArr = new char[ReceivedLen];
 					Array.Copy(TempByteArr, ReceivedCharArr, ReceivedLen);
 					String ReceivedData = new String(ReceivedCharArr);
-					ServerComm.StringBuffer += ReceivedData;
+					MasterComm.StringBuffer += ReceivedData;
 					// Per RFC1459:
 					//    The protocol messages must be extracted from the contiguous stream of octets. The current solution
 					//    is to designate two characters, CR and LF, as message separators. Empty messages are silently ignored,
 					//    which permits use of the sequence CR-LF between messages without extra problems.
-					int IndexOfEndLine = ServerComm.StringBuffer.IndexOfAny(new Char[] {'\r', '\n'});
-                    while (IndexOfEndLine > -1) {
-	                    if (IndexOfEndLine == 0) {
+					int IndexOfEndLine = MasterComm.StringBuffer.IndexOfAny(new Char[] { '\r', '\n' });
+					while (IndexOfEndLine > -1) {
+						if (IndexOfEndLine == 0) {
 							// If CR or LF is the first character of the line, remove it.
-							ServerComm.StringBuffer = ServerComm.StringBuffer.Remove(0, 1);
+							MasterComm.StringBuffer = MasterComm.StringBuffer.Remove(0, 1);
 						} else {
 							// If a CR or LF is not the first character
 							// Send it off to the parser. Could this be a bottle neck? Implement some sort of queue to free the socket?
-							m_ParentServer.ParseRawLine(ServerComm.StringBuffer.Substring(0, IndexOfEndLine));
+							m_ParentMaster.ParseRawLine(MasterComm.StringBuffer.Substring(0, IndexOfEndLine));
 							// Remove the line from the beginning of the buffer
-							ServerComm.StringBuffer = ServerComm.StringBuffer.Remove(0, IndexOfEndLine);
+							MasterComm.StringBuffer = MasterComm.StringBuffer.Remove(0, IndexOfEndLine);
 						}
 						// Seed the next value
-						IndexOfEndLine = ServerComm.StringBuffer.IndexOfAny(new Char[] { '\r', '\n' });
+						IndexOfEndLine = MasterComm.StringBuffer.IndexOfAny(new Char[] { '\r', '\n' });
 					}
 					// Begin receiving data on the socket again.
-					SockHandler.BeginReceive(ServerComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), ServerComm);
+					SockHandler.BeginReceive(MasterComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), MasterComm);
 				} else {
 					Close(SockHandler);
 				}
@@ -114,7 +105,7 @@ namespace TwitchTally.IRC {
 				m_ClientSock.BeginSend(Encoding.UTF8.GetBytes(i_DataToSend), 0, i_DataToSend.Length, 0, new AsyncCallback(OnSendComplete), m_ClientSock);
 				return true;
 			} else {
-				m_ParentServer.Connect();
+				m_ParentMaster.Connect();
 				return false;
 			}
 		}
@@ -130,15 +121,8 @@ namespace TwitchTally.IRC {
 				Logger.Info("IRC Connection Closed.");
 				i_SockHandler.Shutdown(SocketShutdown.Both);
 				i_SockHandler.Close();
-				//m_ParentServer.NetworkLog.CloseLog();
-				//m_ParentServer.Channels = null;
-				//m_ParentServer.BotCommands = null;
-				//m_ParentServer.ConnectionWatchdog.Destroy();
-				//m_ParentServer.ConnectionWatchdog = null;
-				//AppLog.WriteLine(5, "CONN", "Everything cleaned up, sleeping for 5 sec until reconnect attempt...");
-				//Thread.Sleep(5000);
-				//m_ParentServer.Connect();
 			} catch (Exception) { }
 		}
+
 	}
 }

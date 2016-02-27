@@ -48,7 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IRC\IRCComm.cs" />
     <Compile Include="IRC\Server.cs" />
     <Compile Include="IRC\ServerComm.cs" />
     <Compile Include="Logging\IRCLog.cs" />
@@ -60,6 +59,10 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
+    <Compile Include="WorkerComm\MasterServerOld.cs" />
+    <Compile Include="WorkerComm\MasterServer.cs" />
+    <Compile Include="WorkerComm\SocketEventArgs.cs" />
+    <Compile Include="WorkerComm\WorkerClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -78,6 +81,7 @@
       <Name>TwitchTallyShared</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>if $(ConfigurationName)==Debug "$(SolutionDir)\_External\IncreBuild.exe" DEBUG "$(ProjectDir)"
