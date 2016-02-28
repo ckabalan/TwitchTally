@@ -1,144 +1,130 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using TwitchTallyShared;
 using NLog;
 
 namespace TwitchTally.IRC {
 	public class ServerComm {
-		private static readonly NLog.Logger Logger = LogManager.GetCurrentClassLogger();
-		private ManualResetEvent m_ConnectDone = new ManualResetEvent(false);
-		private ManualResetEvent m_SendDone = new ManualResetEvent(false);
-		private ManualResetEvent m_ReceiveDone = new ManualResetEvent(false);
-		private String m_Response = String.Empty;
-		private Socket m_ClientSock;
-		private Server m_ParentServer;
+		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+		private readonly ManualResetEvent _connectDone = new ManualResetEvent(false);
+		private readonly ManualResetEvent _sendDone = new ManualResetEvent(false);
+		private Socket _clientSock;
+		private Server _parentServer;
 
-		public bool Connected { get { return m_ClientSock.Connected; } }
+		public bool Connected => _clientSock.Connected;
 
-		public void StartClient(Server i_ParentServer) {
-			if ((m_ClientSock != null) && (m_ClientSock.Connected)) {
-				Close(m_ClientSock);
+		public void StartClient(Server parentServer) {
+			if ((_clientSock != null) && _clientSock.Connected) {
+				Close(_clientSock);
 			}
-			m_ParentServer = i_ParentServer;
+			// ReSharper disable once RedundantAssignment
 			int i = 0;
-			IPAddress IPAddr;
-			if (int.TryParse(m_ParentServer.Hostname.Substring(0, 1), out i)) {
-				IPAddr = IPAddress.Parse(m_ParentServer.Hostname);
+			_parentServer = parentServer;
+			IPAddress ipAddr;
+			if (int.TryParse(_parentServer.Hostname.Substring(0, 1), out i)) {
+				ipAddr = IPAddress.Parse(_parentServer.Hostname);
 			} else {
-				IPHostEntry ipHostInfo = Dns.GetHostEntry(m_ParentServer.Hostname);
-				IPAddr = ipHostInfo.AddressList[0];
+				IPHostEntry ipHostInfo = Dns.GetHostEntry(_parentServer.Hostname);
+				ipAddr = ipHostInfo.AddressList[0];
 			}
-			IPEndPoint ConnectSock = new IPEndPoint(IPAddr, m_ParentServer.Port);
-			m_ClientSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			IPEndPoint connectSock = new IPEndPoint(ipAddr, _parentServer.Port);
+			_clientSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			Logger.Debug("Initiating Socket Connection.");
-			m_ClientSock.BeginConnect(ConnectSock, new AsyncCallback(OnConnect), m_ClientSock);
+			_clientSock.BeginConnect(connectSock, OnConnect, _clientSock);
 		}
 
-		private void OnConnect(IAsyncResult i_AsyncResult) {
-			Socket ServerSock = (Socket)i_AsyncResult.AsyncState;
-			ServerSock.EndConnect(i_AsyncResult);
+		private void OnConnect(IAsyncResult asyncResult) {
+			Socket serverSock = (Socket)asyncResult.AsyncState;
+			serverSock.EndConnect(asyncResult);
 			Logger.Info("Connected.");
-			m_ConnectDone.Set();
-			SocketComm ServerComm = new SocketComm();
-			ServerComm.ParentComm = this;
-			ServerComm.WorkSocket = ServerSock;
+			_connectDone.Set();
+			SocketComm serverComm = new SocketComm {
+														ParentComm = this,
+														WorkSocket = serverSock
+													};
 			//AppLog.WriteLine(5, "STATUS", "Waiting for data...");
 			Logger.Debug("Starting Recieve Buffer.");
-			ServerComm.WorkSocket.BeginReceive(ServerComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), ServerComm);
+			serverComm.WorkSocket.BeginReceive(serverComm.Buffer, 0, SocketComm.BufferSize, 0, OnDataReceived, serverComm);
 			Logger.Debug("Negotiating IRC Logon.");
-			if (m_ParentServer.Pass != "") {
-				m_ParentServer.QueueSend("PASS " + m_ParentServer.Pass);
-				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
+			if (_parentServer.Pass != "") {
+				_parentServer.QueueSend("PASS " + _parentServer.Pass);
+				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName);
+				_parentServer.QueueSend("NICK " + _parentServer.Nick);
 			} else {
-				m_ParentServer.QueueSend("USER " + m_ParentServer.Nick + " 8 * : " + m_ParentServer.RealName);
-				m_ParentServer.QueueSend("NICK " + m_ParentServer.Nick);
+				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName);
+				_parentServer.QueueSend("NICK " + _parentServer.Nick);
 			}
-			m_ParentServer.StartSendQueueConsumer();
+			_parentServer.StartSendQueueConsumer();
 		}
 
-		private void OnDataReceived(IAsyncResult i_AsyncResult) {
-			SocketComm ServerComm = (SocketComm)i_AsyncResult.AsyncState;
-			Socket SockHandler = ServerComm.WorkSocket;
+		private void OnDataReceived(IAsyncResult asyncResult) {
+			SocketComm serverComm = (SocketComm)asyncResult.AsyncState;
+			Socket sockHandler = serverComm.WorkSocket;
 			try {
-				int BytesRead = SockHandler.EndReceive(i_AsyncResult);
-				if (BytesRead > 0) {
-					char[] TempByteArr = new char[BytesRead];
-					int ReceivedLen = Encoding.UTF8.GetChars(ServerComm.Buffer, 0, BytesRead, TempByteArr, 0);
-					char[] ReceivedCharArr = new char[ReceivedLen];
-					Array.Copy(TempByteArr, ReceivedCharArr, ReceivedLen);
-					String ReceivedData = new String(ReceivedCharArr);
-					ServerComm.StringBuffer += ReceivedData;
+				int bytesRead = sockHandler.EndReceive(asyncResult);
+				if (bytesRead > 0) {
+					char[] tempByteArr = new char[bytesRead];
+					int receivedLen = Encoding.UTF8.GetChars(serverComm.Buffer, 0, bytesRead, tempByteArr, 0);
+					char[] receivedCharArr = new char[receivedLen];
+					Array.Copy(tempByteArr, receivedCharArr, receivedLen);
+					String receivedData = new String(receivedCharArr);
+					serverComm.StringBuffer += receivedData;
 					// Per RFC1459:
 					//    The protocol messages must be extracted from the contiguous stream of octets. The current solution
 					//    is to designate two characters, CR and LF, as message separators. Empty messages are silently ignored,
 					//    which permits use of the sequence CR-LF between messages without extra problems.
-					int IndexOfEndLine = ServerComm.StringBuffer.IndexOfAny(new Char[] {'\r', '\n'});
-                    while (IndexOfEndLine > -1) {
-	                    if (IndexOfEndLine == 0) {
+					int indexOfEndLine = serverComm.StringBuffer.IndexOfAny(new[] {'\r', '\n'});
+                    while (indexOfEndLine > -1) {
+	                    if (indexOfEndLine == 0) {
 							// If CR or LF is the first character of the line, remove it.
-							ServerComm.StringBuffer = ServerComm.StringBuffer.Remove(0, 1);
+							serverComm.StringBuffer = serverComm.StringBuffer.Remove(0, 1);
 						} else {
 							// If a CR or LF is not the first character
 							// Send it off to the parser. Could this be a bottle neck? Implement some sort of queue to free the socket?
-							m_ParentServer.ParseRawLine(ServerComm.StringBuffer.Substring(0, IndexOfEndLine));
+							_parentServer.ParseRawLine(serverComm.StringBuffer.Substring(0, indexOfEndLine));
 							// Remove the line from the beginning of the buffer
-							ServerComm.StringBuffer = ServerComm.StringBuffer.Remove(0, IndexOfEndLine);
+							serverComm.StringBuffer = serverComm.StringBuffer.Remove(0, indexOfEndLine);
 						}
 						// Seed the next value
-						IndexOfEndLine = ServerComm.StringBuffer.IndexOfAny(new Char[] { '\r', '\n' });
+						indexOfEndLine = serverComm.StringBuffer.IndexOfAny(new[] { '\r', '\n' });
 					}
 					// Begin receiving data on the socket again.
-					SockHandler.BeginReceive(ServerComm.Buffer, 0, SocketComm.BufferSize, 0, new AsyncCallback(OnDataReceived), ServerComm);
+					sockHandler.BeginReceive(serverComm.Buffer, 0, SocketComm.BufferSize, 0, OnDataReceived, serverComm);
 				} else {
-					Close(SockHandler);
+					Close(sockHandler);
 				}
-			} catch (SocketException Se) {
-				if (Se.ErrorCode == 10054) {
-					Close(SockHandler);
+			} catch (SocketException se) {
+				if (se.ErrorCode == 10054) {
+					Close(sockHandler);
 				}
 			}
 		}
 
-		public bool Send(string i_DataToSend) {
-			if (m_ClientSock.Connected) {
-				i_DataToSend += "\n";
-				byte[] NewData = new byte[i_DataToSend.Length];
-				m_ClientSock.BeginSend(Encoding.UTF8.GetBytes(i_DataToSend), 0, i_DataToSend.Length, 0, new AsyncCallback(OnSendComplete), m_ClientSock);
+		public bool Send(string dataToSend) {
+			if (_clientSock.Connected) {
+				dataToSend += "\n";
+				_clientSock.BeginSend(Encoding.UTF8.GetBytes(dataToSend), 0, dataToSend.Length, 0, OnSendComplete, _clientSock);
 				return true;
 			} else {
-				m_ParentServer.Connect();
+				_parentServer.Connect();
 				return false;
 			}
 		}
 
-		private void OnSendComplete(IAsyncResult i_AsyncResult) {
-			Socket ServerSock = (Socket)i_AsyncResult.AsyncState;
-			int BytesSent = ServerSock.EndSend(i_AsyncResult);
-			m_SendDone.Set();
+		private void OnSendComplete(IAsyncResult asyncResult) {
+			Socket serverSock = (Socket)asyncResult.AsyncState;
+			serverSock.EndSend(asyncResult);
+			_sendDone.Set();
 		}
 
-		public void Close(Socket i_SockHandler) {
-			try {
-				Logger.Info("IRC Connection Closed.");
-				i_SockHandler.Shutdown(SocketShutdown.Both);
-				i_SockHandler.Close();
-				//m_ParentServer.NetworkLog.CloseLog();
-				//m_ParentServer.Channels = null;
-				//m_ParentServer.BotCommands = null;
-				//m_ParentServer.ConnectionWatchdog.Destroy();
-				//m_ParentServer.ConnectionWatchdog = null;
-				//AppLog.WriteLine(5, "CONN", "Everything cleaned up, sleeping for 5 sec until reconnect attempt...");
-				//Thread.Sleep(5000);
-				//m_ParentServer.Connect();
-			} catch (Exception) { }
+		public void Close(Socket sockHandler) {
+			Logger.Info("IRC Connection Closed.");
+			sockHandler.Shutdown(SocketShutdown.Both);
+			sockHandler.Close();
+			// Should do some logic here to reconnect the socket.
 		}
 	}
 }

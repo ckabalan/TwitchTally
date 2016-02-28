@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
@@ -12,70 +9,60 @@ using TwitchTallyShared;
 
 namespace TwitchTally.IRC {
 	public class Server {
-		private static readonly NLog.Logger Logger = LogManager.GetCurrentClassLogger();
-		private String m_ServerHost = String.Empty;
-		private Int32 m_ServerPort = -1;
-		private String m_ServerPass = String.Empty;
-		private String m_RealName = String.Empty;
-		private String m_Nick = String.Empty;
-		private String m_AltNick = String.Empty;
-		private ServerComm m_ServerComm;
-		private List<String> m_ChannelList = new List<String>();
-		private String m_ExtendedUser = String.Empty;
-		private BlockingCollection<Action> m_SendQueue = new BlockingCollection<Action>();
-		private Int32 m_SendRate = 0;
+		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+		private ServerComm _serverComm;
+		private readonly BlockingCollection<Action> _sendQueue = new BlockingCollection<Action>();
+		private Int32 _sendRate;
 
-		public String Hostname { get { return m_ServerHost; } set { m_ServerHost = value; } }
-		public int Port { get { return m_ServerPort; } set { m_ServerPort = value; } }
-		public String Pass { get { return m_ServerPass; } set { m_ServerPass = value; } }
-		public String RealName { get { return m_RealName; } set { m_RealName = value; } }
-		public String Nick { get { return m_Nick; } set { m_Nick = value; } }
-		public String AltNick { get { return m_AltNick; } set { m_AltNick = value; } }
-		public List<String> ChannelList { get { return m_ChannelList; } set { m_ChannelList = value; } }
-		public String ExtendedUser { get { return m_ExtendedUser; } set { m_ExtendedUser = value; } }
-
-		public Server() { }
+		public String Hostname { get; set; } = String.Empty;
+		public Int32 Port { get; set; } = -1;
+		public String Pass { get; set; } = String.Empty;
+		public String RealName { get; set; } = String.Empty;
+		public String Nick { get; set; } = String.Empty;
+		public String AltNick { get; set; } = String.Empty;
+		public List<String> ChannelList { get; set; } = new List<String>();
+		public String ExtendedUser { get; set; } = String.Empty;
 
 		public void Connect() {
 			Logger.Info("Connecting to {0}:{1} as {2}...", Hostname, Port, Nick);
 			ExtendedUser = String.Format("{0}!{0}@{0}.tmi.twitch.tv", Nick.ToLower());
-            m_ServerComm = new ServerComm();
-			m_ServerComm.StartClient(this);
+            _serverComm = new ServerComm();
+			_serverComm.StartClient(this);
 		}
 
-		public void ParseRawLine(String LineToParse) {
-			Logger.Trace("Incomming Data: {0}", LineToParse);
-			IRCLog.WriteLine(LineToParse);
-			if (LineToParse.Substring(0, 1) == ":") {
-				LineToParse = LineToParse.Substring(1);
-				String[] ParameterSplit = LineToParse.Split(" ".ToCharArray(), 3, StringSplitOptions.RemoveEmptyEntries);
-				String Sender = ParameterSplit[0];
-				String Command = ParameterSplit[1];
-				String Parameters = ParameterSplit[2];
+		public void ParseRawLine(String lineToParse) {
+			Logger.Trace("Incomming Data: {0}", lineToParse);
+			IrcLog.WriteLine(lineToParse);
+			if (lineToParse.Substring(0, 1) == ":") {
+				lineToParse = lineToParse.Substring(1);
+				String[] parameterSplit = lineToParse.Split(" ".ToCharArray(), 3, StringSplitOptions.RemoveEmptyEntries);
+				String sender = parameterSplit[0];
+				String command = parameterSplit[1];
+				String parameters = parameterSplit[2];
 				// Even though we've logged it, we still need to send it down
 				// the line for stuff like PING, CTCP, joining channels, etc.
-				Parse(Sender, Command, Parameters);
+				Parse(sender, command, parameters);
 			} else {
-				String[] Explode = LineToParse.Split(" ".ToCharArray());
-				switch (Explode[0].ToUpper()) {
+				String[] explode = lineToParse.Split(" ".ToCharArray());
+				switch (explode[0].ToUpper()) {
 					case "PING":
-						m_ServerComm.Send("PONG " + Explode[1]);
+						_serverComm.Send("PONG " + explode[1]);
 						break;
 				}
 			}
 		}
 
-		public void Parse(String Sender, String Command, String Parameters) {
+		public void Parse(String sender, String command, String parameters) {
 			//Logger.Trace("   Sender: {0}", Sender);
 			//Logger.Trace("   Command: {0}", Command);
 			//Logger.Trace("   Parameters: {0}", Parameters);
-			String[] ParamSplit = Parameters.Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-			switch (Command.ToUpper()) {
+			String[] paramSplit = parameters.Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+			switch (command.ToUpper()) {
 				case "376":
 					// RAW: 376 - RPL_ENDOFMOTD - ":End of /MOTD command"
 					Logger.Info("Logged in. Negotiating Capabilities...");
 					// Query capabilities for later registration
-					QueueSend(IRCFunctions.CapabilityLS());
+					QueueSend(IrcFunctions.CapabilityLs());
 					break;
 				case "353":
 					// 353 - RPL_NAMREPLY - "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
@@ -114,14 +101,14 @@ namespace TwitchTally.IRC {
 					//    http://ircv3.net/specs/core/capability-negotiation-3.1.html
 					//    http://ircv3.net/specs/core/capability-negotiation-3.2.html
 					// Note: This may not be 100% compliant, but it works for Twitch.tv.
-					if (ParamSplit[0] == "*") {
+					if (paramSplit[0] == "*") {
 						// Not sure what the * denotes
-						switch (ParamSplit[1].ToUpper()) {
+						switch (paramSplit[1].ToUpper()) {
 							case "LS":
 								// Response to LS (list of capabilities supported by the server)
-								String Capabilities = Parameters.Substring(Parameters.IndexOf(":") + 1);
-								Logger.Debug("Requesting Capabilities: {0}", Capabilities);
-								QueueSend(IRCFunctions.CapabilityREQ(Capabilities));
+								String capabilities = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+								Logger.Debug("Requesting Capabilities: {0}", capabilities);
+								QueueSend(IrcFunctions.CapabilityReq(capabilities));
 								break;
 							case "LIST":
 								// Response to LIST (list of active capabilities)
@@ -129,7 +116,7 @@ namespace TwitchTally.IRC {
 							case "ACK":
 								// Response to REQ command (approved).
 								// Would send "CAP END" here, but twitch doesn't respond.
-								Logger.Info("Successfully Negotiated Capabilities: {0}", Parameters.Substring(Parameters.IndexOf(":") + 1));
+								Logger.Info("Successfully Negotiated Capabilities: {0}", parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1));
 								JoinChannels();
                                 break;
 							case "NAK":
@@ -138,28 +125,27 @@ namespace TwitchTally.IRC {
 							case "END":
 								// Response to END command.
 								break;
-							default:
-								break;
 						}
 					}
                     break;
 				case "JOIN":
-					if (ParamSplit[0].Contains(":")) {
+					if (paramSplit[0].Contains(":")) {
 						// Fix because some IRCds send "JOIN :#channel" instead of "JOIN #channel"
-						ParamSplit[0] = ParamSplit[0].Substring(1);
+						paramSplit[0] = paramSplit[0].Substring(1);
 					}
-					if (Sender.ToLower() == ExtendedUser) {
-						ChannelList.Add(ParamSplit[0].ToLower());
+					if (sender.ToLower() == ExtendedUser) {
+						ChannelList.Add(paramSplit[0].ToLower());
 					}
 					break;
 				case "PART":
-					if (ParamSplit.Length >= 2) {
-						string PartMsg = Parameters.Substring(Parameters.IndexOf(":") + 1);
-						if (PartMsg.Length == 0) {
+					if (paramSplit.Length >= 2) {
+						string partMsg = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+						if (partMsg.Length == 0) {
 							//Channels[ParamSplit[0]].Part(Sender, String.Empty);
 						} else {
-							if ((PartMsg.Substring(0, 1) == "\"") && (PartMsg.Substring(PartMsg.Length - 1, 1) == "\"")) {
-								PartMsg = PartMsg.Substring(1, PartMsg.Length - 2);
+							if ((partMsg.Substring(0, 1) == "\"") && (partMsg.Substring(partMsg.Length - 1, 1) == "\"")) {
+								// ReSharper disable once RedundantAssignment
+								partMsg = partMsg.Substring(1, partMsg.Length - 2);
 							}
 						}
 						//Channels[ParamSplit[0]].Part(Sender, PartMsg);
@@ -174,8 +160,8 @@ namespace TwitchTally.IRC {
 					// TODO: Not sure how we want to handle this.
 					break;
 				case "NICK":
-					if (IRCFunctions.GetNickFromHostString(Sender) == m_Nick) {
-						m_Nick = Parameters.Substring(1);
+					if (IrcFunctions.GetNickFromHostString(sender) == Nick) {
+						Nick = parameters.Substring(1);
 					}
 					//foreach (KeyValuePair<string, Channel> CurKVP in Channels) {
 					//	Channels[CurKVP.Key].Nick(Sender, Parameters.Substring(1));
@@ -188,7 +174,7 @@ namespace TwitchTally.IRC {
 					//}
 					break;
 				case "MODE":
-					if (ParamSplit[0].Substring(0, 1) == "#") {
+					if (paramSplit[0].Substring(0, 1) == "#") {
 						// Is a channel mode
 						//Channels[ParamSplit[0]].Mode(Sender, Functions.CombineAfterIndex(ParamSplit, " ", 1));
 					} else {
@@ -196,8 +182,8 @@ namespace TwitchTally.IRC {
 					}
 					break;
 				case "PRIVMSG":
-					String MsgText = Parameters.Substring(Parameters.IndexOf(":") + 1);
-					if (ParamSplit[0].Substring(0, 1) == "#") {
+					String msgText = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+					if (paramSplit[0].Substring(0, 1) == "#") {
 						// Is going to a channel
 						//if (MsgText.Substring(0, 1) == "\x1") {
 						//	// If this is a special PRIVMSG, like an action or CTCP
@@ -215,22 +201,22 @@ namespace TwitchTally.IRC {
 						//}
 					} else {
 						// Is not going to a channel. Probably just me?
-						if (MsgText.Substring(0, 1) == "\x1") {
+						if (msgText.Substring(0, 1) == "\x1") {
 							// If this is a special PRIVMSG, like an action or CTCP
-							MsgText = MsgText.Substring(1, MsgText.Length - 2);
-							String[] PrivMsgSplit = MsgText.Split(" ".ToCharArray(), 2);
-							switch (PrivMsgSplit[0].ToUpper()) {
+							msgText = msgText.Substring(1, msgText.Length - 2);
+							String[] privMsgSplit = msgText.Split(" ".ToCharArray(), 2);
+							switch (privMsgSplit[0].ToUpper()) {
 								case "ACTION":
 									// Not sure what to do here...
 									break;
 								case "VERSION":
-									QueueSend(IRCFunctions.CTCPVersionReply(IRCFunctions.GetNickFromHostString(Sender)));
+									QueueSend(IrcFunctions.CtcpVersionReply(IrcFunctions.GetNickFromHostString(sender)));
 									break;
 								case "TIME":
-									QueueSend(IRCFunctions.CTCPTimeReply(IRCFunctions.GetNickFromHostString(Sender)));
+									QueueSend(IrcFunctions.CtcpTimeReply(IrcFunctions.GetNickFromHostString(sender)));
 									break;
 								case "PING":
-									QueueSend(IRCFunctions.CTCPPingReply(IRCFunctions.GetNickFromHostString(Sender), PrivMsgSplit[1]));
+									QueueSend(IrcFunctions.CtcpPingReply(IrcFunctions.GetNickFromHostString(sender), privMsgSplit[1]));
 									break;
 							}
 						} else {
@@ -248,26 +234,26 @@ namespace TwitchTally.IRC {
 			}
 		}
 
-		public void QueueSend(string i_DataToSend) {
+		public void QueueSend(string dataToSend) {
 			// Reference:
 			//    http://help.twitch.tv/customer/portal/articles/1302780-twitch-irc
 			//    If you send more than 20 commands or messages to the server within a 30 second period, you will get
 			//    locked out for 8 hours automatically. These are not lifted so please be careful when working with IRC!
-			Logger.Trace("Queueing Send: {0}", i_DataToSend);
-			m_SendQueue.Add(() => {
+			Logger.Trace("Queueing Send: {0}", dataToSend);
+			_sendQueue.Add(() => {
 				// Increase the send counter by 1
-				Interlocked.Increment(ref m_SendRate);
+				Interlocked.Increment(ref _sendRate);
 				// Send the data (for real)
-				Send(i_DataToSend);
+				Send(dataToSend);
 				// Schedule the send counter to be decreased after SendLimitTimeMS ms.
-				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref m_SendRate); }, Properties.Settings.Default.SendLimitTimeMS);
+				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref _sendRate); }, Properties.Settings.Default.SendLimitTimeMS);
 			});
 		}
 
-		public void Send(string i_DataToSend) {
+		public void Send(string dataToSend) {
 			// No queuing here, just override it.
-			Logger.Trace("Outgoing Data: {0}", i_DataToSend);
-			m_ServerComm.Send(i_DataToSend);
+			Logger.Trace("Outgoing Data: {0}", dataToSend);
+			_serverComm.Send(dataToSend);
 		}
 
 		public void JoinChannels() {
@@ -275,7 +261,7 @@ namespace TwitchTally.IRC {
 			String[] channelSplit = Properties.Settings.Default.ChannelList.Split(',');
 			foreach (String curChannel in channelSplit) {
 				Logger.Info("Joining Channel: #{0}", curChannel);
-				QueueSend(IRCFunctions.Join('#' + curChannel));
+				QueueSend(IrcFunctions.Join('#' + curChannel));
 			}
 		}
 
@@ -284,13 +270,13 @@ namespace TwitchTally.IRC {
 			Task.Factory.StartNew(() => {
 				while (true) {
 					// Make sure we're still connected.
-					if (m_ServerComm.Connected) {
+					if (_serverComm.Connected) {
 						// Make sure we're not passing SendLimitNum.
-						int TempSendRate = Interlocked.CompareExchange(ref m_SendRate, 0, 0);
-						if (TempSendRate < Properties.Settings.Default.SendLimitNum) {
-							Logger.Trace("Triggering Send at SR {0} ({1} in Queue).", TempSendRate, m_SendQueue.Count);
+						int tempSendRate = Interlocked.CompareExchange(ref _sendRate, 0, 0);
+						if (tempSendRate < Properties.Settings.Default.SendLimitNum) {
+							Logger.Trace("Triggering Send at SR {0} ({1} in Queue).", tempSendRate, _sendQueue.Count);
 							// Remove the action from the queue into curAction;
-							Action curAction = m_SendQueue.Take();
+							Action curAction = _sendQueue.Take();
 							// Execute the queued action
 							curAction();
 						}

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using NLog;
 using TwitchTally.IRC;
 using TwitchTally.Logging;
-using TwitchTally.Communication;
+using TwitchTally.Queueing;
 
 namespace TwitchTally {
 	class Program {
@@ -21,34 +17,37 @@ namespace TwitchTally {
 			//Console.SetBufferSize(250, 20000);
 			//Console.SetWindowSize(250, 50);
 			Logger.Info("TwitchTally v" + Assembly.GetExecutingAssembly().GetName().Version + " started.");
-			StartMasterServer();
+			OutgoingQueue outgoingQueue = new OutgoingQueue();
+
+			//StartMasterServer();
 			//ConnectToIRC();
-			Boolean ExitApplication = false;
-			while (!ExitApplication) {
+			Boolean exitApplication = false;
+			while (!exitApplication) {
 				Console.Write("> ");
-				ExitApplication = ParseCommand(Console.ReadLine());
+				exitApplication = ParseCommand(Console.ReadLine());
 			}
-			IRCLog.CloseLog();
+			IrcLog.CloseLog();
 		}
 
-		static void ConnectToIRC() {
-			Server mainConnection = new Server();
-			mainConnection.Hostname = Properties.Settings.Default.IRCServer;
-			mainConnection.Port = Properties.Settings.Default.IRCPort;
-			mainConnection.Nick = Properties.Settings.Default.IRCUsername;
-			mainConnection.AltNick = Properties.Settings.Default.IRCUsernameAlt;
-			mainConnection.Pass = Properties.Settings.Default.IRCPassword;
+		static void ConnectToIrc() {
+			Server mainConnection = new Server {
+													Hostname = Properties.Settings.Default.IRCServer,
+													Port = Properties.Settings.Default.IRCPort,
+													Nick = Properties.Settings.Default.IRCUsername,
+													AltNick = Properties.Settings.Default.IRCUsernameAlt,
+													Pass = Properties.Settings.Default.IRCPassword
+												};
 			mainConnection.Connect();
 		}
 
 		static void StartMasterServer() {
-			MasterListener masterListener = new MasterListener();
-			masterListener.StartListening();
+			//MasterListener masterListener = new MasterListener();
+			//masterListener.StartListening();
 		}
 
-		static Boolean ParseCommand(String i_Input) {
-			Logger.Info("Input: {0}", i_Input);
-			String[] cmdSplit = i_Input.Split(' ');
+		static Boolean ParseCommand(String input) {
+			Logger.Info("Input: {0}", input);
+			String[] cmdSplit = input.Split(' ');
 			switch (cmdSplit[0].ToUpper()) {
 				case "EXIT":
 					return true;

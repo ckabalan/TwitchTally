@@ -1,4 +1,5 @@
-﻿namespace TwitchTally.Properties {
+﻿// ReSharper disable All
+namespace TwitchTally.Properties {
     
     
     // This class allows you to handle specific events on the settings class:

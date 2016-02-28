@@ -1,102 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TwitchTallyShared {
-	public static class IRCFunctions {
+	public static class IrcFunctions {
 
-		public static string Join(string Channel) {
-			return "JOIN " + Channel;
+		public static string Join(string channel) {
+			return "JOIN " + channel;
 		}
 
-		public static string Join(string Channel, string Password) {
-			if (Password == "") {
-				return "JOIN " + Channel;
+		public static string Join(string channel, string password) {
+			if (password == "") {
+				return "JOIN " + channel;
 			} else {
-				return "JOIN " + Channel + " " + Password;
+				return "JOIN " + channel + " " + password;
 			}
 		}
 
-		public static string PrivMsg(string To, string Message) {
-			return "PRIVMSG " + To + " :" + Message;
+		public static string PrivMsg(string to, string message) {
+			return "PRIVMSG " + to + " :" + message;
 		}
 
-		public static string CapabilityLS() {
+		public static string CapabilityLs() {
 			return "CAP LS";
 		}
 
-		public static string CapabilityREQ(string ListOfCabilities) {
-			return "CAP REQ :" + ListOfCabilities;
+		public static string CapabilityReq(string listOfCabilities) {
+			return "CAP REQ :" + listOfCabilities;
 		}
 
-		public static string CapabilityREQ(List<string> ListOfCabilities) {
-			return "CAP REQ :" + String.Join(" ", ListOfCabilities);
+		public static string CapabilityReq(List<string> listOfCabilities) {
+			return "CAP REQ :" + String.Join(" ", listOfCabilities);
 		}
 
-		public static string CapabilityEND() {
+		public static string CapabilityEnd() {
 			return "CAP END";
 		}
 
-		public static string CTCPVersionReply(string Username) {
-			return "NOTICE " + Username + " :\x01VERSION Twitch Tally Bot v"
+		public static string CtcpVersionReply(string username) {
+			return "NOTICE " + username + " :\x01VERSION Twitch Tally Bot v"
 					+ Assembly.GetExecutingAssembly().GetName().Version + "\x01";
 		}
 
-		public static string CTCPTimeReply(string Username) {
+		public static string CtcpTimeReply(string username) {
 			// Not UTC because it should reflect local time.
-			return "NOTICE " + Username + " :\x01TIME " + DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy") + "\x01";
+			return "NOTICE " + username + " :\x01TIME " + DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy") + "\x01";
 		}
 
-		public static string CTCPPingReply(string Username, string Timestamp) {
-			return "NOTICE " + Username + " :\x01PING " + Timestamp + "\x01";
+		public static string CtcpPingReply(string username, string timestamp) {
+			return "NOTICE " + username + " :\x01PING " + timestamp + "\x01";
 		}
 
 
-		public static string GetNickFromHostString(string HostString) {
-			if (HostString.Contains("!") && HostString.Contains("@")) {
-				string[] TempSplit = HostString.Split("!".ToCharArray());
-				return TempSplit[0];
+		public static string GetNickFromHostString(string hostString) {
+			if (hostString.Contains("!") && hostString.Contains("@")) {
+				return hostString.Split("!".ToCharArray())[0];
 			} else {
-				return HostString;
+				return hostString;
 			}
 
 		}
 
-		public static Sender ParseSender(string SenderStr) {
-			Sender TmpSender = new Sender();
-			TmpSender.SenderStr = SenderStr;
-			if (SenderStr.Contains("!") && SenderStr.Contains("@")) {
-				string[] TempSender = SenderStr.Split('!');
-				TmpSender.Nick = TempSender[0];
-				TempSender = TempSender[1].Split('@');
-				TmpSender.Ident = TempSender[0];
-				TmpSender.Host = TempSender[1];
+		public static Sender ParseSender(string senderStr) {
+			Sender tempSender = new Sender {SenderStr = senderStr};
+			if (senderStr.Contains("!") && senderStr.Contains("@")) {
+				string[] tempSenderStr = senderStr.Split('!');
+				tempSender.Nick = tempSenderStr[0];
+				tempSenderStr = tempSenderStr[1].Split('@');
+				tempSender.Ident = tempSenderStr[0];
+				tempSender.Host = tempSenderStr[1];
 			} else {
-				TmpSender.Server = SenderStr;
+				tempSender.Server = senderStr;
 			}
-			return TmpSender;
+			return tempSender;
 		}
 
-		public static string GetUserFromHostString(string HostString, bool RemoveTilde = true) {
-			if (HostString.Contains("!") && HostString.Contains("@")) {
-				string[] TempSplit = HostString.Split("!".ToCharArray());
-				TempSplit = TempSplit[1].Split("@".ToCharArray());
-				if (RemoveTilde) {
-					if (TempSplit[0].Substring(0, 1) == "~") { TempSplit[0] = TempSplit[0].Substring(1); }
+		public static string GetUserFromHostString(string hostString, bool removeTilde = true) {
+			if (hostString.Contains("!") && hostString.Contains("@")) {
+				string[] tempSplit = hostString.Split("!".ToCharArray());
+				tempSplit = tempSplit[1].Split("@".ToCharArray());
+				if (removeTilde) {
+					if (tempSplit[0].Substring(0, 1) == "~") { tempSplit[0] = tempSplit[0].Substring(1); }
 				}
-				return TempSplit[0];
+				return tempSplit[0];
 			} else {
 				return string.Empty;
 			}
 		}
 
-		public static string GetHostFromHostString(string HostString) {
-			if (HostString.Contains("!") && HostString.Contains("@")) {
-				string[] TempSplit = HostString.Split("@".ToCharArray());
-				return TempSplit[1];
+		public static string GetHostFromHostString(string hostString) {
+			if (hostString.Contains("!") && hostString.Contains("@")) {
+
+				return hostString.Split("@".ToCharArray())[1];
 			} else {
 				return string.Empty;
 			}

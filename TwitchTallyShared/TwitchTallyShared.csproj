@@ -41,7 +41,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Encryption.cs" />
     <Compile Include="Functions.cs" />
     <Compile Include="IRCFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

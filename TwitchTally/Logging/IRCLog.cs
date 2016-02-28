@@ -1,59 +1,72 @@
-﻿using System;
-using System.Collections.Generic;
+﻿// <copyright file="IRCLog.cs" company="SpectralCoding.com">
+//     Copyright (c) 2016 SpectralCoding
+// </copyright>
+// <license>
+// This file is part of TwitchTally.
+// 
+// TwitchTally is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// TwitchTally is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with TwitchTally.  If not, see <http://www.gnu.org/licenses/>.
+// </license>
+// <author>Caesar Kabalan</author>
+
+using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TwitchTally.Logging {
-	public static class IRCLog {
-		private static FileStream m_LogFile;
-		private static StreamWriter m_LogStream;
+	public static class IrcLog {
+		private static FileStream _logFile;
+		private static StreamWriter _logStream;
 
 		private static void OpenLog() {
-			String logDir = Properties.Settings.Default.LogDirectory.TrimEnd(new Char[] {'/', '\\'});
-            if (!Directory.Exists(Properties.Settings.Default.LogDirectory)) {
+			String logDir = Properties.Settings.Default.LogDirectory.TrimEnd('/', '\\');
+			if (!Directory.Exists(Properties.Settings.Default.LogDirectory)) {
 				Directory.CreateDirectory(Properties.Settings.Default.LogDirectory);
 			}
-			string logname = String.Format("{0}/{1:yyyyMMdd-HH}.log", logDir, DateTime.UtcNow);
+			String logname = $"{logDir}/{DateTime.UtcNow:yyyyMMdd-HH}.log";
+			// ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
 			if (File.Exists(logname)) {
-				m_LogFile = new FileStream(String.Format("{0}/{1:yyyyMMdd-HH}.log", logDir, DateTime.UtcNow), FileMode.Append, FileAccess.Write);
+				_logFile = new FileStream($"{logDir}/{DateTime.UtcNow:yyyyMMdd-HH}.log", FileMode.Append, FileAccess.Write);
 			} else {
-				m_LogFile = new FileStream(String.Format("{0}/{1:yyyyMMdd-HH}.log", logDir, DateTime.UtcNow), FileMode.Create, FileAccess.Write);
+				_logFile = new FileStream($"{logDir}/{DateTime.UtcNow:yyyyMMdd-HH}.log", FileMode.Create, FileAccess.Write);
 			}
-			m_LogStream = new StreamWriter(m_LogFile);
-			m_LogStream.AutoFlush = true;
-			WriteLine(String.Format("Opened. TwitchTally v{0}", Assembly.GetExecutingAssembly().GetName().Version.ToString()), true);
+			_logStream = new StreamWriter(_logFile) {AutoFlush = true};
+			WriteLine($"Opened. TwitchTally v{Assembly.GetExecutingAssembly().GetName().Version}", true);
 		}
 
 		public static void CloseLog() {
 			WriteLine("Closed.", true);
-			m_LogStream.Close();
-			m_LogFile.Close();
+			_logStream.Close();
+			_logFile.Close();
 		}
 
-		public static void WriteLine(string LineToAdd, bool Meta = false) {
+		public static void WriteLine(String lineToAdd, Boolean meta = false) {
 			//TimeSpan TimeSinceMidnight = DateTime.UtcNow.TimeOfDay;
 			//double MSOfDay = Math.Floor(TimeSinceMidnight.TotalMilliseconds);
 			//Output = String.Format("{0} {1}", MSOfDay, LineToAdd);
-			if (m_LogFile == null) {
+			if (_logFile == null) {
 				OpenLog();
 			} else {
-				if (Path.GetFileName(m_LogFile.Name) != String.Format("{0:yyyyMMdd-HH}.log", DateTime.UtcNow)) {
-					m_LogStream.WriteLine(String.Format("{0:O}#Closed.", DateTime.UtcNow));
-					m_LogStream.Close();
-					m_LogFile.Close();
-                    OpenLog();
+				if (Path.GetFileName(_logFile.Name) != $"{DateTime.UtcNow:yyyyMMdd-HH}.log") {
+					_logStream.WriteLine("{0:O}#Closed.", DateTime.UtcNow);
+					_logStream.Close();
+					_logFile.Close();
+					OpenLog();
 				}
 			}
-			if (Meta) {
-				// Meta lines seperate the Timestamp from the content with #
-				m_LogStream.WriteLine(String.Format("{0:O}#{1}", DateTime.UtcNow, LineToAdd));
-			} else {
-				// Strict log lines seperate the Timestamp from the content with |
-				m_LogStream.WriteLine(String.Format("{0:O}|{1}", DateTime.UtcNow, LineToAdd));
-			}
+			_logStream.WriteLine(meta
+									? $"{DateTime.UtcNow:O}#{lineToAdd}"
+									: $"{DateTime.UtcNow:O}|{lineToAdd}");
 		}
 	}
 }
