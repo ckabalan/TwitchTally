@@ -1,4 +1,4 @@
-﻿// <copyright file="Program.cs" company="SpectralCoding.com">
+﻿// <copyright file="IrcParser.cs" company="SpectralCoding.com">
 //     Copyright (c) 2016 SpectralCoding
 // </copyright>
 // <license>
@@ -21,22 +21,15 @@
 
 using System;
 using NLog;
-using TwitchTallyWorker.Queueing;
 
-namespace TwitchTallyWorker {
-	class Program {
+namespace TwitchTallyWorker.Processing {
+	public static class IrcParser {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-		// ReSharper disable once UnusedParameter.Local
-		static void Main(String[] args) {
-			//Master master = new Master();
-			//master.Connect();
-			//WorkerConnection workerConnection = new WorkerConnection();
-			//workerConnection.Connect();
-			IncommingQueue incommingQueue = new IncommingQueue();
-
-			Logger.Info("Waiting for User Input before exiting.");
-			Console.ReadLine();
+		public static void Parse(String message, DateTime dateTime) {
+			Logger.Trace("Incomming Message:{0}", message);
+			// To simulate load so that we don't empty the queue instantly.
+			//Thread.Sleep(10);
 		}
 	}
 }

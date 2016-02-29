@@ -1,4 +1,25 @@
-﻿using System;
+﻿// <copyright file="Server.cs" company="SpectralCoding.com">
+//     Copyright (c) 2016 SpectralCoding
+// </copyright>
+// <license>
+// This file is part of TwitchTally.
+// 
+// TwitchTally is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// TwitchTally is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with TwitchTally.  If not, see <http://www.gnu.org/licenses/>.
+// </license>
+// <author>Caesar Kabalan</author>
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -6,13 +27,14 @@ using System.Threading.Tasks;
 using NLog;
 using TwitchTally.Logging;
 using TwitchTallyShared;
+using TwitchTally.Queueing;
 
 namespace TwitchTally.IRC {
 	public class Server {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-		private ServerComm _serverComm;
 		private readonly BlockingCollection<Action> _sendQueue = new BlockingCollection<Action>();
 		private Int32 _sendRate;
+		private ServerComm _serverComm;
 
 		public String Hostname { get; set; } = String.Empty;
 		public Int32 Port { get; set; } = -1;
@@ -26,13 +48,14 @@ namespace TwitchTally.IRC {
 		public void Connect() {
 			Logger.Info("Connecting to {0}:{1} as {2}...", Hostname, Port, Nick);
 			ExtendedUser = String.Format("{0}!{0}@{0}.tmi.twitch.tv", Nick.ToLower());
-            _serverComm = new ServerComm();
+			_serverComm = new ServerComm();
 			_serverComm.StartClient(this);
 		}
 
-		public void ParseRawLine(String lineToParse) {
+		public void ParseRawLine(String lineToParse, DateTime dateTime) {
 			Logger.Trace("Incomming Data: {0}", lineToParse);
-			IrcLog.WriteLine(lineToParse);
+			IrcLog.WriteLine(lineToParse, dateTime);
+			OutgoingQueue.QueueIrc(lineToParse, dateTime);
 			if (lineToParse.Substring(0, 1) == ":") {
 				lineToParse = lineToParse.Substring(1);
 				String[] parameterSplit = lineToParse.Split(" ".ToCharArray(), 3, StringSplitOptions.RemoveEmptyEntries);
@@ -116,9 +139,10 @@ namespace TwitchTally.IRC {
 							case "ACK":
 								// Response to REQ command (approved).
 								// Would send "CAP END" here, but twitch doesn't respond.
-								Logger.Info("Successfully Negotiated Capabilities: {0}", parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1));
+								Logger.Info("Successfully Negotiated Capabilities: {0}",
+											parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1));
 								JoinChannels();
-                                break;
+								break;
 							case "NAK":
 								// Response to REQ command (rejected).
 								break;
@@ -127,7 +151,7 @@ namespace TwitchTally.IRC {
 								break;
 						}
 					}
-                    break;
+					break;
 				case "JOIN":
 					if (paramSplit[0].Contains(":")) {
 						// Fix because some IRCds send "JOIN :#channel" instead of "JOIN #channel"
@@ -139,7 +163,7 @@ namespace TwitchTally.IRC {
 					break;
 				case "PART":
 					if (paramSplit.Length >= 2) {
-						string partMsg = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+						String partMsg = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
 						if (partMsg.Length == 0) {
 							//Channels[ParamSplit[0]].Part(Sender, String.Empty);
 						} else {
@@ -149,8 +173,6 @@ namespace TwitchTally.IRC {
 							}
 						}
 						//Channels[ParamSplit[0]].Part(Sender, PartMsg);
-					} else {
-						//Channels[ParamSplit[0]].Part(Sender, String.Empty);
 					}
 					break;
 				case "KICK":
@@ -177,8 +199,6 @@ namespace TwitchTally.IRC {
 					if (paramSplit[0].Substring(0, 1) == "#") {
 						// Is a channel mode
 						//Channels[ParamSplit[0]].Mode(Sender, Functions.CombineAfterIndex(ParamSplit, " ", 1));
-					} else {
-						// Is not going to a channel. Probably me?
 					}
 					break;
 				case "PRIVMSG":
@@ -219,10 +239,6 @@ namespace TwitchTally.IRC {
 									QueueSend(IrcFunctions.CtcpPingReply(IrcFunctions.GetNickFromHostString(sender), privMsgSplit[1]));
 									break;
 							}
-						} else {
-							// Private Message directly to me.
-							//String[] MsgSplitPrv = MsgText.Split(" ".ToCharArray());
-							//BotCommands.HandlePM(Sender, MsgSplitPrv);
 						}
 					}
 					break;
@@ -234,7 +250,7 @@ namespace TwitchTally.IRC {
 			}
 		}
 
-		public void QueueSend(string dataToSend) {
+		public void QueueSend(String dataToSend) {
 			// Reference:
 			//    http://help.twitch.tv/customer/portal/articles/1302780-twitch-irc
 			//    If you send more than 20 commands or messages to the server within a 30 second period, you will get
@@ -246,11 +262,12 @@ namespace TwitchTally.IRC {
 				// Send the data (for real)
 				Send(dataToSend);
 				// Schedule the send counter to be decreased after SendLimitTimeMS ms.
-				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref _sendRate); }, Properties.Settings.Default.SendLimitTimeMS);
+				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref _sendRate); },
+										Properties.Settings.Default.SendLimitTimeMS);
 			});
 		}
 
-		public void Send(string dataToSend) {
+		public void Send(String dataToSend) {
 			// No queuing here, just override it.
 			Logger.Trace("Outgoing Data: {0}", dataToSend);
 			_serverComm.Send(dataToSend);
@@ -266,13 +283,15 @@ namespace TwitchTally.IRC {
 		}
 
 		public void StartSendQueueConsumer() {
-			Logger.Debug("Starting Send Queue Consumer Thread (Send Throttling = {0} per {1}ms)", Properties.Settings.Default.SendLimitNum, Properties.Settings.Default.SendLimitTimeMS);
+			Logger.Debug("Starting Send Queue Consumer Thread (Send Throttling = {0} per {1}ms)",
+						Properties.Settings.Default.SendLimitNum,
+						Properties.Settings.Default.SendLimitTimeMS);
 			Task.Factory.StartNew(() => {
 				while (true) {
 					// Make sure we're still connected.
 					if (_serverComm.Connected) {
 						// Make sure we're not passing SendLimitNum.
-						int tempSendRate = Interlocked.CompareExchange(ref _sendRate, 0, 0);
+						Int32 tempSendRate = Interlocked.CompareExchange(ref _sendRate, 0, 0);
 						if (tempSendRate < Properties.Settings.Default.SendLimitNum) {
 							Logger.Trace("Triggering Send at SR {0} ({1} in Queue).", tempSendRate, _sendQueue.Count);
 							// Remove the action from the queue into curAction;
@@ -282,7 +301,17 @@ namespace TwitchTally.IRC {
 						}
 					}
 				}
+				// ReSharper disable once FunctionNeverReturns
 			});
+		}
+
+		public void Disconnect() {
+			Logger.Info("Disconnecting from IRC.");
+			_serverComm.CloseConnection();
+		}
+
+		public void Disconnected() {
+			Connect();
 		}
 	}
 }

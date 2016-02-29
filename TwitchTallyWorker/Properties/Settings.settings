@@ -2,17 +2,20 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="TwitchTallyWorker.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="MasterHostname" Type="System.String" Scope="Application">
+    <Setting Name="RabbitMQHostname" Type="System.String" Scope="Application">
       <Value Profile="(Default)">127.0.0.1</Value>
     </Setting>
-    <Setting Name="MasterPort" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">13370</Value>
+    <Setting Name="RabbitMQPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5672</Value>
     </Setting>
-    <Setting Name="MasterPassword" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">xEFcstcEVOCiMe0fw7cJf3Z5ZEluABJ9</Value>
+    <Setting Name="RabbitMQUsername" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">twitchtally</Value>
     </Setting>
-    <Setting Name="MasterCommBufferSize" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">4096</Value>
+    <Setting Name="RabbitMQPassword" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">twitchtally</Value>
+    </Setting>
+    <Setting Name="RabbitMQIRCQueue" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">irc_queue</Value>
     </Setting>
   </Settings>
 </SettingsFile>

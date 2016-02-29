@@ -1,4 +1,4 @@
-﻿// <copyright file="IRCLog.cs" company="SpectralCoding.com">
+﻿// <copyright file="IrcLog.cs" company="SpectralCoding.com">
 //     Copyright (c) 2016 SpectralCoding
 // </copyright>
 // <license>
@@ -28,7 +28,7 @@ namespace TwitchTally.Logging {
 		private static FileStream _logFile;
 		private static StreamWriter _logStream;
 
-		private static void OpenLog() {
+		private static void OpenLog(DateTime dateTime) {
 			String logDir = Properties.Settings.Default.LogDirectory.TrimEnd('/', '\\');
 			if (!Directory.Exists(Properties.Settings.Default.LogDirectory)) {
 				Directory.CreateDirectory(Properties.Settings.Default.LogDirectory);
@@ -41,32 +41,32 @@ namespace TwitchTally.Logging {
 				_logFile = new FileStream($"{logDir}/{DateTime.UtcNow:yyyyMMdd-HH}.log", FileMode.Create, FileAccess.Write);
 			}
 			_logStream = new StreamWriter(_logFile) {AutoFlush = true};
-			WriteLine($"Opened. TwitchTally v{Assembly.GetExecutingAssembly().GetName().Version}", true);
+			WriteLine($"Opened. TwitchTally v{Assembly.GetExecutingAssembly().GetName().Version}", dateTime, true);
 		}
 
-		public static void CloseLog() {
-			WriteLine("Closed.", true);
+		public static void CloseLog(DateTime dateTime) {
+			WriteLine("Closed.", dateTime, true);
 			_logStream.Close();
 			_logFile.Close();
 		}
 
-		public static void WriteLine(String lineToAdd, Boolean meta = false) {
+		public static void WriteLine(String lineToAdd, DateTime dateTime, Boolean meta = false) {
 			//TimeSpan TimeSinceMidnight = DateTime.UtcNow.TimeOfDay;
 			//double MSOfDay = Math.Floor(TimeSinceMidnight.TotalMilliseconds);
 			//Output = String.Format("{0} {1}", MSOfDay, LineToAdd);
 			if (_logFile == null) {
-				OpenLog();
+				OpenLog(dateTime);
 			} else {
-				if (Path.GetFileName(_logFile.Name) != $"{DateTime.UtcNow:yyyyMMdd-HH}.log") {
-					_logStream.WriteLine("{0:O}#Closed.", DateTime.UtcNow);
+				if (Path.GetFileName(_logFile.Name) != $"{dateTime:yyyyMMdd-HH}.log") {
+					_logStream.WriteLine("{0:O}#Closed.", dateTime);
 					_logStream.Close();
 					_logFile.Close();
-					OpenLog();
+					OpenLog(dateTime);
 				}
 			}
 			_logStream.WriteLine(meta
-									? $"{DateTime.UtcNow:O}#{lineToAdd}"
-									: $"{DateTime.UtcNow:O}|{lineToAdd}");
+									? $"{dateTime:O}#{lineToAdd}"
+									: $"{dateTime:O}|{lineToAdd}");
 		}
 	}
 }

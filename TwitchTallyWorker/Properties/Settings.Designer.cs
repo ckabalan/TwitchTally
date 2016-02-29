@@ -26,36 +26,45 @@ namespace TwitchTallyWorker.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1")]
-        public string MasterHostname {
+        public string RabbitMQHostname {
             get {
-                return ((string)(this["MasterHostname"]));
+                return ((string)(this["RabbitMQHostname"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("13370")]
-        public int MasterPort {
+        [global::System.Configuration.DefaultSettingValueAttribute("5672")]
+        public int RabbitMQPort {
             get {
-                return ((int)(this["MasterPort"]));
+                return ((int)(this["RabbitMQPort"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("xEFcstcEVOCiMe0fw7cJf3Z5ZEluABJ9")]
-        public string MasterPassword {
+        [global::System.Configuration.DefaultSettingValueAttribute("twitchtally")]
+        public string RabbitMQUsername {
             get {
-                return ((string)(this["MasterPassword"]));
+                return ((string)(this["RabbitMQUsername"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4096")]
-        public int MasterCommBufferSize {
+        [global::System.Configuration.DefaultSettingValueAttribute("twitchtally")]
+        public string RabbitMQPassword {
             get {
-                return ((int)(this["MasterCommBufferSize"]));
+                return ((string)(this["RabbitMQPassword"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("irc_queue")]
+        public string RabbitMQIRCQueue {
+            get {
+                return ((string)(this["RabbitMQIRCQueue"]));
             }
         }
     }

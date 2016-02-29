@@ -121,5 +121,50 @@ namespace TwitchTally.Properties {
                 return ((int)(this["SendLimitTimeMS"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1")]
+        public string RabbitMQHostname {
+            get {
+                return ((string)(this["RabbitMQHostname"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5672")]
+        public int RabbitMQPort {
+            get {
+                return ((int)(this["RabbitMQPort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("twitchtally")]
+        public string RabbitMQUsername {
+            get {
+                return ((string)(this["RabbitMQUsername"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("twitchtally")]
+        public string RabbitMQPassword {
+            get {
+                return ((string)(this["RabbitMQPassword"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("irc_queue")]
+        public string RabbitMQIRCQueue {
+            get {
+                return ((string)(this["RabbitMQIRCQueue"]));
+            }
+        }
     }
 }

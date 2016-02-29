@@ -35,5 +35,20 @@
     <Setting Name="SendLimitTimeMS" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">30000</Value>
     </Setting>
+    <Setting Name="RabbitMQHostname" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">127.0.0.1</Value>
+    </Setting>
+    <Setting Name="RabbitMQPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5672</Value>
+    </Setting>
+    <Setting Name="RabbitMQUsername" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">twitchtally</Value>
+    </Setting>
+    <Setting Name="RabbitMQPassword" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">twitchtally</Value>
+    </Setting>
+    <Setting Name="RabbitMQIRCQueue" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">irc_queue</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

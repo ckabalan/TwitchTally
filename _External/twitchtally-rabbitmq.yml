@@ -1,0 +1,14 @@
+version: '2'
+services:
+	tt_rabbit:
+		image: rabbitmq:3-management
+		container_name: tt_rabbit
+		hostname: tt_rabbit
+		build: .
+		ports:
+			- "25672:15672"
+			- "5671:5671"
+			- "5672:5672"
+		environment:
+			- RABBITMQ_DEFAULT_USER=twitchtally
+			- RABBITMQ_DEFAULT_PASS=twitchtally
