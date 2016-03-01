@@ -17,5 +17,11 @@
     <Setting Name="RabbitMQIRCQueue" Type="System.String" Scope="Application">
       <Value Profile="(Default)">irc_queue</Value>
     </Setting>
+    <Setting Name="RedisConnectString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">127.0.0.1:6379,password=twitchtally</Value>
+    </Setting>
+    <Setting Name="Accuracies" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">10s,30s,1m,5m,10m,30m,1h,6h,12h,1d</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

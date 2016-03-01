@@ -26,6 +26,7 @@ using NLog;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using TwitchTallyWorker.Processing;
+using TwitchTallyWorker.DataManagement;
 
 namespace TwitchTallyWorker.Queueing {
 	class IncommingQueue {
@@ -38,28 +39,27 @@ namespace TwitchTallyWorker.Queueing {
 				UserName = Properties.Settings.Default.RabbitMQUsername,
 				Password = Properties.Settings.Default.RabbitMQPassword
 			};
-			using (var connection = factory.CreateConnection()) {
-				using (var channel = connection.CreateModel()) {
-					channel.QueueDeclare(Properties.Settings.Default.RabbitMQIRCQueue, true, false, false, null);
-					channel.BasicQos(0, 1, false);
-					EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
-					consumer.Received += (model, ea) => {
-						Byte[] body = ea.Body;
-						String message = Encoding.UTF8.GetString(body);
-						String[] strSplit = message.Split(new[] {'|'}, 2);
-						DateTime ircDateTime;
-						if (DateTime.TryParseExact(strSplit[0], "o", CultureInfo.InvariantCulture, DateTimeStyles.None, out ircDateTime)) {
-							IrcParser.Parse(strSplit[1], ircDateTime);
-						} else {
-							Logger.Info("Bad RabbitMQ Entry: {0}", message);
-						}
-						channel.BasicAck(ea.DeliveryTag, false);
-					};
-					channel.BasicConsume(Properties.Settings.Default.RabbitMQIRCQueue, false, consumer);
-					Console.WriteLine(" Press [enter] to exit.");
-					Console.ReadLine();
+			var connection = factory.CreateConnection();
+			var channel = connection.CreateModel();
+			channel.QueueDeclare(Properties.Settings.Default.RabbitMQIRCQueue, true, false, false, null);
+			channel.BasicQos(0, 1, false);
+			EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
+			consumer.Received += (model, ea) => {
+				Byte[] body = ea.Body;
+				String message = Encoding.UTF8.GetString(body);
+				String[] strSplit = message.Split(new[] {'|'}, 2);
+				DateTime ircDateTime;
+				if (DateTime.TryParseExact(strSplit[0], "o", CultureInfo.InvariantCulture, DateTimeStyles.None, out ircDateTime)) {
+					IrcParser.Parse(strSplit[1], ircDateTime);
+					DataStore.WaitTasks();
+				} else {
+					Logger.Info("Bad RabbitMQ Entry: {0}", message);
 				}
-			}
+				channel.BasicAck(ea.DeliveryTag, false);
+			};
+			channel.BasicConsume(Properties.Settings.Default.RabbitMQIRCQueue, false, consumer);
+			//Console.WriteLine(" Press [enter] to exit.");
+			//Console.ReadLine();
 		}
 	}
 }

@@ -1,0 +1,12 @@
+version: '2'
+services:
+        tt_redis:
+                image: redis
+                container_name: tt_redis
+                hostname: tt_redis
+                command: redis-server /usr/local/etc/redis/redis.conf
+                build: .
+                ports:
+                        - "63791:6379"
+                volumes:
+                        - /root/redis.conf:/usr/local/etc/redis/redis.conf

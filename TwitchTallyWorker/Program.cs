@@ -22,6 +22,8 @@
 using System;
 using NLog;
 using TwitchTallyWorker.Queueing;
+using TwitchTallyWorker.DataManagement;
+using TwitchTallyWorker.Processing;
 
 namespace TwitchTallyWorker {
 	class Program {
@@ -29,10 +31,8 @@ namespace TwitchTallyWorker {
 
 		// ReSharper disable once UnusedParameter.Local
 		static void Main(String[] args) {
-			//Master master = new Master();
-			//master.Connect();
-			//WorkerConnection workerConnection = new WorkerConnection();
-			//workerConnection.Connect();
+			LineParser.SetAccuracies(Properties.Settings.Default.Accuracies);
+			DataStore.Connect(Properties.Settings.Default.RedisConnectString);
 			IncommingQueue incommingQueue = new IncommingQueue();
 
 			Logger.Info("Waiting for User Input before exiting.");
