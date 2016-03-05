@@ -28,13 +28,27 @@ using NLog;
 using TwitchTally.Logging;
 using TwitchTallyShared;
 using TwitchTally.Queueing;
+using TwitchTally.TwitchAPI;
+using Timer = System.Threading.Timer;
 
 namespace TwitchTally.IRC {
 	public class Server {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-		private readonly BlockingCollection<Action> _sendQueue = new BlockingCollection<Action>();
+		//private ConcurrentBag<String> _channels = new ConcurrentBag<String>();
+		private readonly ConcurrentDictionary<String, Int32> _channelStatus = new ConcurrentDictionary<String, Int32>();
+		private readonly BlockingCollection<String>[] _sendQueue;
+		private readonly BlockingCollection<String> _sendQueueHigh = new BlockingCollection<String>();
+		//private readonly BlockingCollection<Action> _sendQueue = new BlockingCollection<Action>();
+		private readonly BlockingCollection<String> _sendQueueNorm = new BlockingCollection<String>();
+		private Timer _joinTimer;
+
 		private Int32 _sendRate;
 		private ServerComm _serverComm;
+
+		public Server() {
+			// Order is important as BlockingCollection<T>.TakeFromAny() will use the order of array elements.
+			_sendQueue = new[] {_sendQueueHigh, _sendQueueNorm};
+		}
 
 		public String Hostname { get; set; } = String.Empty;
 		public Int32 Port { get; set; } = -1;
@@ -55,7 +69,7 @@ namespace TwitchTally.IRC {
 		public void ParseRawLine(String lineToParse, DateTime dateTime) {
 			Logger.Trace("Incomming Data: {0}", lineToParse);
 			IrcLog.WriteLine(lineToParse, dateTime);
-			OutgoingQueue.QueueIrc(lineToParse, dateTime);
+			//OutgoingQueue.QueueIrc(lineToParse, dateTime);
 			if (lineToParse.Substring(0, 1) == ":") {
 				lineToParse = lineToParse.Substring(1);
 				String[] parameterSplit = lineToParse.Split(" ".ToCharArray(), 3, StringSplitOptions.RemoveEmptyEntries);
@@ -69,7 +83,8 @@ namespace TwitchTally.IRC {
 				String[] explode = lineToParse.Split(" ".ToCharArray());
 				switch (explode[0].ToUpper()) {
 					case "PING":
-						_serverComm.Send("PONG " + explode[1]);
+						QueueSend("PONG " + explode[1], true);
+						//_serverComm.Send("PONG " + explode[1]);
 						break;
 				}
 			}
@@ -85,7 +100,7 @@ namespace TwitchTally.IRC {
 					// RAW: 376 - RPL_ENDOFMOTD - ":End of /MOTD command"
 					Logger.Info("Logged in. Negotiating Capabilities...");
 					// Query capabilities for later registration
-					QueueSend(IrcFunctions.CapabilityLs());
+					QueueSend(IrcFunctions.CapabilityLs(), true);
 					break;
 				case "353":
 					// 353 - RPL_NAMREPLY - "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
@@ -96,7 +111,7 @@ namespace TwitchTally.IRC {
 				case "433":
 					//433 - ERR_NICKNAMEINUSE - "<nick> :Nickname is already in use"
 					Logger.Info("Nick already in use. Attempting change to {0}.", Nick);
-					QueueSend("NICK " + AltNick);
+					QueueSend("NICK " + AltNick, true);
 					Nick = AltNick;
 					ExtendedUser = String.Format("{0}!{0}@{0}.tmi.twitch.tv", Nick.ToLower());
 					break;
@@ -131,7 +146,7 @@ namespace TwitchTally.IRC {
 								// Response to LS (list of capabilities supported by the server)
 								String capabilities = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
 								Logger.Debug("Requesting Capabilities: {0}", capabilities);
-								QueueSend(IrcFunctions.CapabilityReq(capabilities));
+								QueueSend(IrcFunctions.CapabilityReq(capabilities), true);
 								break;
 							case "LIST":
 								// Response to LIST (list of active capabilities)
@@ -141,7 +156,7 @@ namespace TwitchTally.IRC {
 								// Would send "CAP END" here, but twitch doesn't respond.
 								Logger.Info("Successfully Negotiated Capabilities: {0}",
 											parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1));
-								JoinChannels();
+								JoinOrPartChannels();
 								break;
 							case "NAK":
 								// Response to REQ command (rejected).
@@ -158,7 +173,10 @@ namespace TwitchTally.IRC {
 						paramSplit[0] = paramSplit[0].Substring(1);
 					}
 					if (sender.ToLower() == ExtendedUser) {
-						ChannelList.Add(paramSplit[0].ToLower());
+						// Add it as zero, or if it exists, set it to 0. Substring portion cuts off #
+						_channelStatus.AddOrUpdate(paramSplit[0].ToLower().Substring(1), 0, (name, count) => 0);
+						//_channels.Add(paramSplit[0].ToLower());
+						Logger.Debug("Channel List: {0}", String.Join(", ", _channelStatus.Keys));
 					}
 					break;
 				case "PART":
@@ -171,6 +189,12 @@ namespace TwitchTally.IRC {
 								// ReSharper disable once RedundantAssignment
 								partMsg = partMsg.Substring(1, partMsg.Length - 2);
 							}
+						}
+						if (sender.ToLower() == ExtendedUser) {
+							Int32 temp;
+							_channelStatus.TryRemove(paramSplit[0].ToLower().Substring(1), out temp);
+							//_channels.TryTake(paramSplit[0].ToLower());
+							Logger.Debug("Channel List: {0}", String.Join(", ", _channelStatus.Keys));
 						}
 						//Channels[ParamSplit[0]].Part(Sender, PartMsg);
 					}
@@ -250,21 +274,14 @@ namespace TwitchTally.IRC {
 			}
 		}
 
-		public void QueueSend(String dataToSend) {
-			// Reference:
-			//    http://help.twitch.tv/customer/portal/articles/1302780-twitch-irc
-			//    If you send more than 20 commands or messages to the server within a 30 second period, you will get
-			//    locked out for 8 hours automatically. These are not lifted so please be careful when working with IRC!
-			Logger.Trace("Queueing Send: {0}", dataToSend);
-			_sendQueue.Add(() => {
-				// Increase the send counter by 1
-				Interlocked.Increment(ref _sendRate);
-				// Send the data (for real)
-				Send(dataToSend);
-				// Schedule the send counter to be decreased after SendLimitTimeMS ms.
-				Functions.PauseAndExecute(() => { Interlocked.Decrement(ref _sendRate); },
-										Properties.Settings.Default.SendLimitTimeMS);
-			});
+		public void QueueSend(String dataToSend, Boolean highPriority = false) {
+			if (highPriority) {
+				Logger.Trace("Queueing Send (High): {0}", dataToSend);
+				_sendQueueHigh.Add(dataToSend);
+			} else {
+				Logger.Trace("Queueing Send (Norm): {0}", dataToSend);
+				_sendQueueNorm.Add(dataToSend);
+			}
 		}
 
 		public void Send(String dataToSend) {
@@ -273,19 +290,110 @@ namespace TwitchTally.IRC {
 			_serverComm.Send(dataToSend);
 		}
 
-		public void JoinChannels() {
-			Logger.Info("Channel List: {0}", Properties.Settings.Default.ChannelList);
-			String[] channelSplit = Properties.Settings.Default.ChannelList.Split(',');
-			foreach (String curChannel in channelSplit) {
-				Logger.Info("Joining Channel: #{0}", curChannel);
-				QueueSend(IrcFunctions.Join('#' + curChannel));
+		public void JoinOrPartChannels() {
+			// Channel Status:
+			//    -2 = Queued Part
+			//    -1 = Queued Join
+			//    0+ = Joined (Value represents strike count)
+			List<String> forcedChannels = new List<String>(Properties.Settings.Default.ChannelList.Split(','));
+			List<TwitchStream> streams =
+				TwitchStreams.GetStreamsByMinViewers(Convert.ToInt32(Properties.Settings.Default.AutojoinViewerMinimum * 0.8));
+			if (streams.Count == 0) {
+				Logger.Warn("No Twitch.tv streams found meeting viewer minimums. Skipping Join/Part process.");
+			} else {
+				// Join channels which meet the minimum viewer requirement
+				foreach (TwitchStream curStream in streams) {
+					if (curStream.Viewers >= Properties.Settings.Default.AutojoinViewerMinimum) {
+						// We're above the Viewer Minimum so join
+						if (_channelStatus.ContainsKey(curStream.Name.ToLower())) {
+							// We have some sort of status for this channel
+							Int32 status;
+							_channelStatus.TryGetValue(curStream.Name.ToLower(), out status);
+							if (status == -2) {
+								// We're already set to part this channel
+								// We're above the Viewer Minimum so queue a join even though we're already set to part
+								Logger.Info($"Stream {curStream.Name} has {curStream.Viewers} viewers. Joining...");
+								QueueSend(IrcFunctions.Join('#' + curStream.Name.ToLower()));
+								_channelStatus.AddOrUpdate(curStream.Name.ToLower(), -1, (name, count) => -1);
+							} else if (status > 0) {
+								// We're in the channel, so reset it's strike counter since it it's in the "OK" list
+								_channelStatus.AddOrUpdate(curStream.Name.ToLower(), 0, (name, count) => 0);
+							}
+						} else {
+							// We've never done anything with this channel before so queue a join.
+							Logger.Info($"Stream {curStream.Name} has {curStream.Viewers} viewers. Joining...");
+							QueueSend(IrcFunctions.Join('#' + curStream.Name.ToLower()));
+							_channelStatus.AddOrUpdate(curStream.Name.ToLower(), -1, (name, count) => -1);
+						}
+					}
+				}
+				foreach (String curChannel in forcedChannels) {
+					// This channel is a forced channel
+					if (_channelStatus.ContainsKey(curChannel.ToLower())) {
+						// We have some sort of status for this channel
+						Int32 status;
+						_channelStatus.TryGetValue(curChannel.ToLower(), out status);
+						if (status == -2) {
+							// We're already set to part this channel (this should only happen if we're kicked since we don't volunteer to part forced channels)
+							// We're above the Viewer Minimum so join even though we're already set to part
+							Logger.Info($"Stream {curChannel} is in the forced list. Joining...");
+							QueueSend(IrcFunctions.Join('#' + curChannel.ToLower()));
+							_channelStatus.AddOrUpdate(curChannel.ToLower(), -1, (name, count) => -1);
+						}
+					} else {
+						// We've never done anything with this channel before
+						Logger.Info($"Stream {curChannel} is in the forced list. Joining...");
+						QueueSend(IrcFunctions.Join('#' + curChannel.ToLower()));
+						_channelStatus.AddOrUpdate(curChannel.ToLower(), -1, (name, count) => -1);
+					}
+				}
+				// Leave channels which don't meet 80% of the minimum viewer requirement
+				foreach (KeyValuePair<String, Int32> curChanKVP in _channelStatus) {
+					if (!forcedChannels.Contains(curChanKVP.Key.ToLower())) {
+						// If this is not a forced channel
+						Int32 findIndex =
+							streams.FindIndex(f => String.Equals(f.Name, curChanKVP.Key, StringComparison.CurrentCultureIgnoreCase));
+						if (findIndex == -1) {
+							// Channel didn't come back in our twitch query (meaning it is offline or below min viewer count)
+							if (_channelStatus.ContainsKey(curChanKVP.Key.ToLower())) {
+								// We have some sort of status for this channel
+								Int32 status;
+								_channelStatus.TryGetValue(curChanKVP.Key.ToLower(), out status);
+								if (status >= 0) {
+									// We're already in the channel (don't give strikes until we're in the channel)
+									// Increment the number of strikes
+									_channelStatus[curChanKVP.Key.ToLower()]++;
+									Logger.Info(
+												 $"Stream {curChanKVP.Key} has less than {Properties.Settings.Default.AutojoinViewerMinimum * 0.8} viewers. Strike {_channelStatus[curChanKVP.Key.ToLower()]}/{Properties.Settings.Default.AutojoinStrikeLimit}...");
+									if (_channelStatus[curChanKVP.Key.ToLower()] >= Properties.Settings.Default.AutojoinStrikeLimit) {
+										// We're at max strikes, queue a leave
+										Logger.Info(
+													 $"Strike {_channelStatus[curChanKVP.Key.ToLower()]}/{Properties.Settings.Default.AutojoinStrikeLimit} for {curChanKVP.Key}... Leaving...");
+										QueueSend(IrcFunctions.Part('#' + curChanKVP.Key.ToLower()));
+										_channelStatus.AddOrUpdate(curChanKVP.Key.ToLower(), -2, (name, count) => -2);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (_joinTimer == null) {
+				Logger.Info($"Starting Channel Maintainer ({Properties.Settings.Default.AutojoinCheckFrequencyMS}ms)");
+				_joinTimer = new Timer(_ => JoinOrPartChannels(), null, Properties.Settings.Default.AutojoinCheckFrequencyMS,
+										Timeout.Infinite);
+			} else {
+				_joinTimer.Change(Properties.Settings.Default.AutojoinCheckFrequencyMS, Timeout.Infinite);
 			}
 		}
 
 		public void StartSendQueueConsumer() {
-			Logger.Debug("Starting Send Queue Consumer Thread (Send Throttling = {0} per {1}ms)",
-						Properties.Settings.Default.SendLimitNum,
-						Properties.Settings.Default.SendLimitTimeMS);
+			// Reference:
+			//    http://help.twitch.tv/customer/portal/articles/1302780-twitch-irc
+			//    If you send more than 20 commands or messages to the server within a 30 second period, you will get
+			//    locked out for 8 hours automatically. These are not lifted so please be careful when working with IRC!
+			Logger.Debug(
+						 $"Starting Send Queue Consumer Thread (Send Throttling = {Properties.Settings.Default.SendLimitNum} per {Properties.Settings.Default.SendLimitTimeMS}ms)");
 			Task.Factory.StartNew(() => {
 				while (true) {
 					// Make sure we're still connected.
@@ -293,11 +401,18 @@ namespace TwitchTally.IRC {
 						// Make sure we're not passing SendLimitNum.
 						Int32 tempSendRate = Interlocked.CompareExchange(ref _sendRate, 0, 0);
 						if (tempSendRate < Properties.Settings.Default.SendLimitNum) {
-							Logger.Trace("Triggering Send at SR {0} ({1} in Queue).", tempSendRate, _sendQueue.Count);
-							// Remove the action from the queue into curAction;
-							Action curAction = _sendQueue.Take();
-							// Execute the queued action
-							curAction();
+							Logger.Trace("Triggering Send at SR {0} ({1}T/{2}H/{3}N in Queue).", tempSendRate,
+										_sendQueueHigh.Count + _sendQueueNorm.Count, _sendQueueHigh.Count, _sendQueueNorm.Count);
+							// Remove the message from the queue into curMsg;
+							String curMsg;
+							BlockingCollection<String>.TakeFromAny(_sendQueue, out curMsg);
+							// Increase the send counter by 1
+							Interlocked.Increment(ref _sendRate);
+							// Send the data (for real)
+							Send(curMsg);
+							// Schedule the send counter to be decreased after SendLimitTimeMS ms.
+							Functions.PauseAndExecute(() => { Interlocked.Decrement(ref _sendRate); },
+													Properties.Settings.Default.SendLimitTimeMS);
 						}
 					}
 				}
@@ -311,7 +426,21 @@ namespace TwitchTally.IRC {
 		}
 
 		public void Disconnected() {
-			Connect();
+			Logger.Info($"Emptying High Priority Send Queue ({_sendQueueHigh.Count} Messages)...");
+			while (_sendQueueHigh.Count > 0) {
+				String item;
+				_sendQueueHigh.TryTake(out item);
+			}
+			Logger.Info($"Emptying Normal Priority Send Queue ({_sendQueueNorm.Count} Messages)...");
+			while (_sendQueueNorm.Count > 0) {
+				String item;
+				_sendQueueHigh.TryTake(out item);
+			}
+			Logger.Debug($"Cleanning Channel List ({_channelStatus.Count} Channels)...");
+			_channelStatus.Clear();
+			Logger.Info("Waiting 30sec to reconnect...");
+			// Wait 30sec and queue again.
+			Functions.PauseAndExecute(Connect, 30000);
 		}
 	}
 }

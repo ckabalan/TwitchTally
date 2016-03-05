@@ -29,6 +29,10 @@ namespace TwitchTallyShared {
 			return "JOIN " + channel;
 		}
 
+		public static String Part(String channel) {
+			return "PART " + channel;
+		}
+
 		public static String Join(String channel, String password) {
 			if (password == "") {
 				return "JOIN " + channel;

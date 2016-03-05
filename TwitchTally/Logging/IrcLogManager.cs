@@ -61,10 +61,10 @@ namespace TwitchTally.Logging {
 			}
 			Int64 totalLines = ircCounter + metaCounter;
 			Double speed = (Double)totalLines / stopwatch.ElapsedMilliseconds * 1000.0;
-			Logger.Info("\tDone! Took {0:n0} milliseconds.", stopwatch.ElapsedMilliseconds);
-			Logger.Info("\t   IRC Lines: {0:n0}", ircCounter);
-			Logger.Info("\t  Meta Lines: {0:n0}", metaCounter);
-			Logger.Info("\t       Speed: {0:n0} Lines/Sec", speed);
+			Logger.Info("   Done! Took {0:n0} milliseconds.", stopwatch.ElapsedMilliseconds);
+			Logger.Info("      IRC Lines: {0:n0}", ircCounter);
+			Logger.Info("     Meta Lines: {0:n0}", metaCounter);
+			Logger.Info("          Speed: {0:n0} Lines/Sec", speed);
 		}
 	}
 }

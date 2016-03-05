@@ -1,8 +1,26 @@
-﻿using System;
+﻿// <copyright file="LineParser.cs" company="SpectralCoding.com">
+//     Copyright (c) 2016 SpectralCoding
+// </copyright>
+// <license>
+// This file is part of TwitchTally.
+// 
+// TwitchTally is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// TwitchTally is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with TwitchTally.  If not, see <http://www.gnu.org/licenses/>.
+// </license>
+// <author>Caesar Kabalan</author>
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using NLog;
 using StackExchange.Redis;
 using TwitchTallyWorker.DataManagement;
@@ -28,10 +46,10 @@ namespace TwitchTallyWorker.Processing {
 						multiplier = 60;
 						break;
 					case "H":
-						multiplier = 60*60;
+						multiplier = 60 * 60;
 						break;
 					case "D":
-						multiplier = 60*60*24;
+						multiplier = 60 * 60 * 24;
 						break;
 					default:
 						multiplier = 1;
@@ -41,13 +59,14 @@ namespace TwitchTallyWorker.Processing {
 			}
 		}
 
-
-		public static void Message(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+		public static void Message(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
+			String message) {
 			AddMessageChannel(dateTime, "_global");
 			AddMessageChannel(dateTime, channel);
 		}
 
-		public static void Action(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+		public static void Action(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
+			String message) {
 			AddActionChannel(dateTime, "_global");
 			AddActionChannel(dateTime, channel);
 		}
@@ -55,20 +74,18 @@ namespace TwitchTallyWorker.Processing {
 		public static void Join(DateTime dateTime, Dictionary<String, String> options, String channel, String username) {
 			AddJoinChannel(dateTime, "_global");
 			AddJoinChannel(dateTime, channel);
-
 		}
 
-		public static void Part(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+		public static void Part(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
+			String message) {
 			AddPartChannel(dateTime, "_global");
 			AddPartChannel(dateTime, channel);
 		}
 
-
-
 		private static void AddMessageChannel(DateTime date, String channel) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
-				Int32 timeId = GetTimeID(date, curAcc);
+				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"Line:{channel}|{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Messages"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
@@ -80,7 +97,7 @@ namespace TwitchTallyWorker.Processing {
 		private static void AddActionChannel(DateTime date, String channel) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
-				Int32 timeId = GetTimeID(date, curAcc);
+				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"Line:{channel}|{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Actions"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
@@ -92,7 +109,7 @@ namespace TwitchTallyWorker.Processing {
 		private static void AddJoinChannel(DateTime date, String channel) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
-				Int32 timeId = GetTimeID(date, curAcc);
+				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"Line:{channel}|{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Joins"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
@@ -104,7 +121,7 @@ namespace TwitchTallyWorker.Processing {
 		private static void AddPartChannel(DateTime date, String channel) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
-				Int32 timeId = GetTimeID(date, curAcc);
+				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"Line:{channel}|{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Parts"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
@@ -113,7 +130,7 @@ namespace TwitchTallyWorker.Processing {
 			}
 		}
 
-		private static Int32 GetTimeID(DateTime date, Int32 accuracySeconds) {
+		private static Int32 GetTimeId(DateTime date, Int32 accuracySeconds) {
 			DateTime fakeEpoch = new DateTime(2016, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 			return Convert.ToInt32(Math.Floor((date - fakeEpoch).TotalSeconds / accuracySeconds));
 		}

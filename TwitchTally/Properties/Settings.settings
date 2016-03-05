@@ -15,10 +15,10 @@
       <Value Profile="(Default)">oauth:BunchOfOAuthJibberishHere</Value>
     </Setting>
     <Setting Name="AutojoinTopChannels" Type="System.Boolean" Scope="Application">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="AutojoinViewerMinimum" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">100</Value>
+      <Value Profile="(Default)">1000</Value>
     </Setting>
     <Setting Name="ChannelList" Type="System.String" Scope="Application">
       <Value Profile="(Default)">channel1,channel2,channel3</Value>
@@ -49,6 +49,12 @@
     </Setting>
     <Setting Name="RabbitMQIRCQueue" Type="System.String" Scope="Application">
       <Value Profile="(Default)">irc_queue</Value>
+    </Setting>
+    <Setting Name="AutojoinCheckFrequencyMS" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">60000</Value>
+    </Setting>
+    <Setting Name="AutojoinStrikeLimit" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">10</Value>
     </Setting>
   </Settings>
 </SettingsFile>

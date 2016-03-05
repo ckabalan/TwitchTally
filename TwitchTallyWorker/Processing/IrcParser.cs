@@ -60,7 +60,8 @@ namespace TwitchTallyWorker.Processing {
 			}
 		}
 
-		public static void Process(String sender, String command, String parameters, DateTime dateTime, Dictionary<String, String> options) {
+		public static void Process(String sender, String command, String parameters, DateTime dateTime,
+			Dictionary<String, String> options) {
 			String[] paramSplit = parameters.Split(" ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 			switch (command.ToUpper()) {
 				case "376":

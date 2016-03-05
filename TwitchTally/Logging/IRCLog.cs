@@ -1,4 +1,4 @@
-﻿// <copyright file="IrcLog.cs" company="SpectralCoding.com">
+﻿// <copyright file="IRCLog.cs" company="SpectralCoding.com">
 //     Copyright (c) 2016 SpectralCoding
 // </copyright>
 // <license>

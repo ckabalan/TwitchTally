@@ -61,7 +61,7 @@ namespace TwitchTally.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool AutojoinTopChannels {
             get {
                 return ((bool)(this["AutojoinTopChannels"]));
@@ -70,7 +70,7 @@ namespace TwitchTally.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
         public int AutojoinViewerMinimum {
             get {
                 return ((int)(this["AutojoinViewerMinimum"]));
@@ -164,6 +164,24 @@ namespace TwitchTally.Properties {
         public string RabbitMQIRCQueue {
             get {
                 return ((string)(this["RabbitMQIRCQueue"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("60000")]
+        public int AutojoinCheckFrequencyMS {
+            get {
+                return ((int)(this["AutojoinCheckFrequencyMS"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int AutojoinStrikeLimit {
+            get {
+                return ((int)(this["AutojoinStrikeLimit"]));
             }
         }
     }

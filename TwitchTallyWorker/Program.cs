@@ -30,7 +30,7 @@ namespace TwitchTallyWorker {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
 		// ReSharper disable once UnusedParameter.Local
-		static void Main(String[] args) {
+		private static void Main(String[] args) {
 			LineParser.SetAccuracies(Properties.Settings.Default.Accuracies);
 			DataStore.Connect(Properties.Settings.Default.RedisConnectString);
 			IncommingQueue incommingQueue = new IncommingQueue();

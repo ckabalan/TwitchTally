@@ -20,6 +20,7 @@
 // <author>Caesar Kabalan</author>
 
 using System;
+
 // ReSharper disable All
 
 namespace TwitchTally.Properties {

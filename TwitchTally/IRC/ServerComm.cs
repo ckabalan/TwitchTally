@@ -71,12 +71,12 @@ namespace TwitchTally.IRC {
 			serverComm.WorkSocket.BeginReceive(serverComm.Buffer, 0, SocketComm.BufferSize, 0, OnDataReceived, serverComm);
 			Logger.Debug("Negotiating IRC Logon.");
 			if (_parentServer.Pass != "") {
-				_parentServer.QueueSend("PASS " + _parentServer.Pass);
-				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName);
-				_parentServer.QueueSend("NICK " + _parentServer.Nick);
+				_parentServer.QueueSend("PASS " + _parentServer.Pass, true);
+				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName, true);
+				_parentServer.QueueSend("NICK " + _parentServer.Nick, true);
 			} else {
-				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName);
-				_parentServer.QueueSend("NICK " + _parentServer.Nick);
+				_parentServer.QueueSend("USER " + _parentServer.Nick + " 8 * : " + _parentServer.RealName, true);
+				_parentServer.QueueSend("NICK " + _parentServer.Nick, true);
 			}
 			_parentServer.StartSendQueueConsumer();
 		}
@@ -151,7 +151,6 @@ namespace TwitchTally.IRC {
 			sockHandler.Shutdown(SocketShutdown.Both);
 			sockHandler.Close();
 			_parentServer.Disconnected();
-			// Should do some logic here to reconnect the socket.
 		}
 
 		public void CloseConnection() {

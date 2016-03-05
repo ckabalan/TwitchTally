@@ -70,7 +70,7 @@ namespace TwitchTallyWorker.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1:6379,password=twitchtally")]
+        [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1:63791,password=twitchtally")]
         public string RedisConnectString {
             get {
                 return ((string)(this["RedisConnectString"]));

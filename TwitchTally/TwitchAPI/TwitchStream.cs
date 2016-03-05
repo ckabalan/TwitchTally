@@ -1,4 +1,4 @@
-﻿// <copyright file="DataStore.cs" company="SpectralCoding.com">
+﻿// <copyright file="TwitchStream.cs" company="SpectralCoding.com">
 //     Copyright (c) 2016 SpectralCoding
 // </copyright>
 // <license>
@@ -20,31 +20,18 @@
 // <author>Caesar Kabalan</author>
 
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using StackExchange.Redis;
 
-namespace TwitchTallyWorker.DataManagement {
-	public static class DataStore {
-		private static ConnectionMultiplexer _redis;
-		public static List<Task> Tasks = new List<Task>();
-
-		public static ConnectionMultiplexer Redis {
-			get { return _redis; }
-			set { _redis = value; }
-		}
-
-		public static void Connect(String connectString) {
-			_redis = ConnectionMultiplexer.Connect(connectString);
-		}
-
-		public static void WaitTasks() {
-			//Stopwatch stopWatch = new Stopwatch();
-			//stopWatch.Start();
-			Task.WaitAll(Tasks.ToArray());
-			Tasks.Clear();
-			//stopWatch.Stop();
-			//TimeSpan ts = stopWatch.Elapsed;
-		}
+namespace TwitchTally.TwitchAPI {
+	public struct TwitchStream {
+		public Int32 Viewers;
+		public Boolean IsMature;
+		public String BroadcasterLanguage;
+		public String Language;
+		public String Game;
+		public String Name;
+		public Boolean IsDelayed;
+		public Int32 Delay;
+		public Int32 VideoHeight;
+		public Double VideoFps;
 	}
 }
