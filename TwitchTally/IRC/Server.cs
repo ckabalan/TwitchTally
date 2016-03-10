@@ -145,6 +145,10 @@ namespace TwitchTally.IRC {
 							case "LS":
 								// Response to LS (list of capabilities supported by the server)
 								String capabilities = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+								if (Properties.Settings.Default.TwitchMembershipCapabilityEnable == false) {
+									Logger.Debug("Ignoring twitch.tv/membership IRCv3 capability");
+									capabilities = capabilities.Replace("twitch.tv/membership", "").Trim();
+								}
 								Logger.Debug("Requesting Capabilities: {0}", capabilities);
 								QueueSend(IrcFunctions.CapabilityReq(capabilities), true);
 								break;

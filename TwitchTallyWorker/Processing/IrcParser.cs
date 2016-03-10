@@ -86,26 +86,28 @@ namespace TwitchTallyWorker.Processing {
 					// Note: This may not be 100% compliant, but it works for Twitch.tv.
 					break;
 				case "JOIN":
-					if (paramSplit[0].Contains(":")) {
-						// Fix because some IRCds send "JOIN :#channel" instead of "JOIN #channel"
-						paramSplit[0] = paramSplit[0].Substring(1);
-					}
-					LineParser.Join(dateTime, options, paramSplit[0], IrcFunctions.GetNickFromHostString(sender));
+					// We don't care about joins/parts at this point
+					//if (paramSplit[0].Contains(":")) {
+					//	// Fix because some IRCds send "JOIN :#channel" instead of "JOIN #channel"
+					//	paramSplit[0] = paramSplit[0].Substring(1);
+					//}
+					//LineParser.Join(dateTime, options, paramSplit[0], IrcFunctions.GetNickFromHostString(sender));
 					break;
 				case "PART":
-					if (paramSplit.Length >= 2) {
-						String partMsg = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
-						// I don't remember what the logic is behind most of this block. Investigate later.
-						if (partMsg.Length == 0) {
-							//Channels[ParamSplit[0]].Part(Sender, String.Empty);
-						} else {
-							if ((partMsg.Substring(0, 1) == "\"") && (partMsg.Substring(partMsg.Length - 1, 1) == "\"")) {
-								// ReSharper disable once RedundantAssignment
-								partMsg = partMsg.Substring(1, partMsg.Length - 2);
-							}
-						}
-						LineParser.Part(dateTime, options, paramSplit[0], IrcFunctions.GetNickFromHostString(sender), partMsg);
-					}
+					// We don't care about joins/parts at this point
+					//if (paramSplit.Length >= 2) {
+					//	String partMsg = parameters.Substring(parameters.IndexOf(":", StringComparison.Ordinal) + 1);
+					//	// I don't remember what the logic is behind most of this block. Investigate later.
+					//	if (partMsg.Length == 0) {
+					//		//Channels[ParamSplit[0]].Part(Sender, String.Empty);
+					//	} else {
+					//		if ((partMsg.Substring(0, 1) == "\"") && (partMsg.Substring(partMsg.Length - 1, 1) == "\"")) {
+					//			// ReSharper disable once RedundantAssignment
+					//			partMsg = partMsg.Substring(1, partMsg.Length - 2);
+					//		}
+					//	}
+					//	LineParser.Part(dateTime, options, paramSplit[0], IrcFunctions.GetNickFromHostString(sender), partMsg);
+					//}
 					break;
 				case "KICK":
 					//Channels[ParamSplit[0]].Kick(Sender, ParamSplit[1], Functions.CombineAfterIndex(ParamSplit, " ", 2).Substring(1));

@@ -21,6 +21,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 
@@ -28,6 +29,7 @@ namespace TwitchTallyWorker.DataManagement {
 	public static class DataStore {
 		private static ConnectionMultiplexer _redis;
 		public static List<Task> Tasks = new List<Task>();
+		public const String Delimiter = ":";
 
 		public static ConnectionMultiplexer Redis {
 			get { return _redis; }
@@ -45,6 +47,13 @@ namespace TwitchTallyWorker.DataManagement {
 			Tasks.Clear();
 			//stopWatch.Stop();
 			//TimeSpan ts = stopWatch.Elapsed;
+		}
+
+		public static String KeyEncode(String input) {
+			return Convert.ToBase64String(Encoding.UTF8.GetBytes(input));
+		}
+		public static String KeyDecode(String input) {
+			return Encoding.UTF8.GetString(Convert.FromBase64String(input));
 		}
 	}
 }

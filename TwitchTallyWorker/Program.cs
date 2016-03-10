@@ -24,6 +24,7 @@ using NLog;
 using TwitchTallyWorker.Queueing;
 using TwitchTallyWorker.DataManagement;
 using TwitchTallyWorker.Processing;
+using TwitchTallyWorker.Emotes;
 
 namespace TwitchTallyWorker {
 	class Program {
@@ -33,6 +34,7 @@ namespace TwitchTallyWorker {
 		private static void Main(String[] args) {
 			LineParser.SetAccuracies(Properties.Settings.Default.Accuracies);
 			DataStore.Connect(Properties.Settings.Default.RedisConnectString);
+			EmoteManager.Download(true);
 			IncommingQueue incommingQueue = new IncommingQueue();
 
 			Logger.Info("Waiting for User Input before exiting.");

@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using NLog;
 using StackExchange.Redis;
 using TwitchTallyWorker.DataManagement;
+using TwitchTallyWorker.Emotes;
 
 namespace TwitchTallyWorker.Processing {
 	public static class LineParser {
@@ -63,12 +64,14 @@ namespace TwitchTallyWorker.Processing {
 			String message) {
 			AddMessageChannel(dateTime, "_global");
 			AddMessageChannel(dateTime, channel);
+			ScanEmotes(dateTime, channel, message);
 		}
 
 		public static void Action(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
 			String message) {
 			AddActionChannel(dateTime, "_global");
 			AddActionChannel(dateTime, channel);
+			ScanEmotes(dateTime, channel, message);
 		}
 
 		public static void Join(DateTime dateTime, Dictionary<String, String> options, String channel, String username) {
@@ -82,15 +85,34 @@ namespace TwitchTallyWorker.Processing {
 			AddPartChannel(dateTime, channel);
 		}
 
+		public static void ScanEmotes(DateTime date, String channelName, String message) {
+			IDatabase db = DataStore.Redis.GetDatabase();
+			String[] messageWords = message.Split(' ');
+			foreach (String curWord in messageWords) {
+				if (EmoteManager.EmoteHashSet.Contains(curWord)) {
+					String foundEmote = DataStore.KeyEncode(curWord);
+					foreach (Int32 curAcc in _accuracies) {
+						Int32 timeId = GetTimeId(date, curAcc);
+						String htField = $"{curAcc}{DataStore.Delimiter}{timeId}";
+						DataStore.Tasks.Add(db.HashIncrementAsync($"emote{DataStore.Delimiter}_global{DataStore.Delimiter}{foundEmote}", htField, 1));
+						DataStore.Tasks.Add(db.HashIncrementAsync($"emote{DataStore.Delimiter}{channelName}{DataStore.Delimiter}{foundEmote}", htField, 1));
+						htField = $"{foundEmote}{DataStore.Delimiter}{timeId}";
+						DataStore.Tasks.Add(db.HashIncrementAsync($"emotetime{DataStore.Delimiter}_global{DataStore.Delimiter}{curAcc}", htField, 1));
+						DataStore.Tasks.Add(db.HashIncrementAsync($"emotetime{DataStore.Delimiter}{channelName}{DataStore.Delimiter}{curAcc}", htField, 1));
+					}
+				}
+			}
+		}
+
 		private static void AddMessageChannel(DateTime date, String channel) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
-				String htName = $"Line:{channel}|{curAcc}";
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Messages"));
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
+				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}messages"));
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
 				// Leave this off until we're sure we need it
-				DataStore.Tasks.Add(db.SetAddAsync("Lines", htName));
+				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
@@ -98,11 +120,11 @@ namespace TwitchTallyWorker.Processing {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
-				String htName = $"Line:{channel}|{curAcc}";
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Actions"));
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
+				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}actions"));
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
 				// Leave this off until we're sure we need it
-				DataStore.Tasks.Add(db.SetAddAsync("Lines", htName));
+				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
@@ -110,11 +132,11 @@ namespace TwitchTallyWorker.Processing {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
-				String htName = $"Line:{channel}|{curAcc}";
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Joins"));
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
+				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}joins"));
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
 				// Leave this off until we're sure we need it
-				DataStore.Tasks.Add(db.SetAddAsync("Lines", htName));
+				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
@@ -122,11 +144,11 @@ namespace TwitchTallyWorker.Processing {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
-				String htName = $"Line:{channel}|{curAcc}";
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Parts"));
-				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"{timeId}|Total"));
+				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}parts"));
+				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
 				// Leave this off until we're sure we need it
-				DataStore.Tasks.Add(db.SetAddAsync("Lines", htName));
+				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
