@@ -1,0 +1,3 @@
+The following command downloads the Mozilla-maintained root certificates. The URL that ships by default with mozroots has not been updated since 2009.
+
+mozroots --import --machine --sync --url http://mxr.mozilla.org/mozilla-central/source/security/nss/lib/ckfw/builtins/certdata.txt?raw=1

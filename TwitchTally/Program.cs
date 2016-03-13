@@ -44,8 +44,8 @@ namespace TwitchTally {
 			//Console.SetBufferSize(250, 20000);
 			//Console.SetWindowSize(250, 50);
 			Logger.Info("TwitchTally v" + Assembly.GetExecutingAssembly().GetName().Version + " started.");
-			//OutgoingQueue.Initialize();
-			ConnectToIrc();
+			OutgoingQueue.Initialize();
+			//ConnectToIrc();
 			Boolean exitApplication = false;
 			while (!exitApplication) {
 				Console.Write("> ");

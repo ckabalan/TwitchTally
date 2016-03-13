@@ -20,6 +20,8 @@
 // <author>Caesar Kabalan</author>
 
 using System;
+using System.Net;
+using System.Reflection;
 using NLog;
 using TwitchTallyWorker.Queueing;
 using TwitchTallyWorker.DataManagement;
@@ -32,9 +34,11 @@ namespace TwitchTallyWorker {
 
 		// ReSharper disable once UnusedParameter.Local
 		private static void Main(String[] args) {
+			Logger.Info("TwitchTallyWorker v" + Assembly.GetExecutingAssembly().GetName().Version + " started.");
 			LineParser.SetAccuracies(Properties.Settings.Default.Accuracies);
 			DataStore.Connect(Properties.Settings.Default.RedisConnectString);
-			EmoteManager.Download(true);
+			EmoteManager.ImportFromRedis();
+			EmoteManager.Download();
 			IncommingQueue incommingQueue = new IncommingQueue();
 
 			Logger.Info("Waiting for User Input before exiting.");

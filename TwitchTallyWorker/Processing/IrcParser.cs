@@ -29,7 +29,7 @@ namespace TwitchTallyWorker.Processing {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
 		public static void Parse(String message, DateTime dateTime) {
-			//Logger.Trace("Incomming Message:{0}", message);
+			//Logger.Trace($"Incomming Message:{message}");
 			// Sample Data:
 			//    PING :tmi.twitch.tv
 			//    :jtv MODE #sodapoppin -o zondagshow

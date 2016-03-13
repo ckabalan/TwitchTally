@@ -60,33 +60,31 @@ namespace TwitchTallyWorker.Processing {
 			}
 		}
 
-		public static void Message(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
-			String message) {
-			AddMessageChannel(dateTime, "_global");
-			AddMessageChannel(dateTime, channel);
+		public static void Message(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+			AddMessageChannel(dateTime, "_global", options);
+			AddMessageChannel(dateTime, channel, options);
 			ScanEmotes(dateTime, channel, message);
 		}
 
-		public static void Action(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
-			String message) {
-			AddActionChannel(dateTime, "_global");
-			AddActionChannel(dateTime, channel);
+		public static void Action(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+			AddActionChannel(dateTime, "_global", options);
+			AddActionChannel(dateTime, channel, options);
 			ScanEmotes(dateTime, channel, message);
 		}
 
 		public static void Join(DateTime dateTime, Dictionary<String, String> options, String channel, String username) {
-			AddJoinChannel(dateTime, "_global");
-			AddJoinChannel(dateTime, channel);
+			AddJoinChannel(dateTime, "_global", options);
+			AddJoinChannel(dateTime, channel, options);
 		}
 
-		public static void Part(DateTime dateTime, Dictionary<String, String> options, String channel, String username,
-			String message) {
-			AddPartChannel(dateTime, "_global");
-			AddPartChannel(dateTime, channel);
+		public static void Part(DateTime dateTime, Dictionary<String, String> options, String channel, String username, String message) {
+			AddPartChannel(dateTime, "_global", options);
+			AddPartChannel(dateTime, channel, options);
 		}
 
 		public static void ScanEmotes(DateTime date, String channelName, String message) {
 			IDatabase db = DataStore.Redis.GetDatabase();
+			EmoteManager.GetChannelBttvEmotes(channelName);
 			String[] messageWords = message.Split(' ');
 			foreach (String curWord in messageWords) {
 				if (EmoteManager.EmoteHashSet.Contains(curWord)) {
@@ -104,49 +102,97 @@ namespace TwitchTallyWorker.Processing {
 			}
 		}
 
-		private static void AddMessageChannel(DateTime date, String channel) {
+		private static void AddMessageChannel(DateTime date, String channel, Dictionary<String, String> options) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}messages"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
+				if (options.ContainsKey("subscriber") && (options["subscriber"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}messages_sub"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_sub"));
+				}
+				if (options.ContainsKey("mod") && (options["mod"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}messages_mod"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_mod"));
+				}
+				if (options.ContainsKey("turbo") && (options["turbo"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}messages_turbo"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_turbo"));
+				}
 				// Leave this off until we're sure we need it
 				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
-		private static void AddActionChannel(DateTime date, String channel) {
+		private static void AddActionChannel(DateTime date, String channel, Dictionary<String, String> options) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}actions"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
+				if (options.ContainsKey("subscriber") && (options["subscriber"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}actions_sub"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_sub"));
+				}
+				if (options.ContainsKey("mod") && (options["mod"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}actions_mod"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_mod"));
+				}
+				if (options.ContainsKey("turbo") && (options["turbo"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}actions_turbo"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_turbo"));
+				}
 				// Leave this off until we're sure we need it
 				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
-		private static void AddJoinChannel(DateTime date, String channel) {
+		private static void AddJoinChannel(DateTime date, String channel, Dictionary<String, String> options) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}joins"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
+				if (options.ContainsKey("subscriber") && (options["subscriber"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}joins_sub"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_sub"));
+				}
+				if (options.ContainsKey("mod") && (options["mod"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}joins_mod"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_mod"));
+				}
+				if (options.ContainsKey("turbo") && (options["turbo"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}joins_turbo"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_turbo"));
+				}
 				// Leave this off until we're sure we need it
 				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
 		}
 
-		private static void AddPartChannel(DateTime date, String channel) {
+		private static void AddPartChannel(DateTime date, String channel, Dictionary<String, String> options) {
 			IDatabase db = DataStore.Redis.GetDatabase();
 			foreach (Int32 curAcc in _accuracies) {
 				Int32 timeId = GetTimeId(date, curAcc);
 				String htName = $"line{DataStore.Delimiter}{channel}{DataStore.Delimiter}{curAcc}";
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}parts"));
 				DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total"));
+				if (options.ContainsKey("subscriber") && (options["subscriber"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}parts_sub"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_sub"));
+				}
+				if (options.ContainsKey("mod") && (options["mod"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}parts_mod"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_mod"));
+				}
+				if (options.ContainsKey("turbo") && (options["turbo"] == "1")) {
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}parts_turbo"));
+					DataStore.Tasks.Add(db.HashIncrementAsync(htName, $"time{DataStore.Delimiter}{timeId}{DataStore.Delimiter}total_turbo"));
+				}
 				// Leave this off until we're sure we need it
 				DataStore.Tasks.Add(db.SetAddAsync("linelist", htName));
 			}
